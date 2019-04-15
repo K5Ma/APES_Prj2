@@ -48,7 +48,7 @@ static const uint32_t UARTBase[8] =
 
 
 
-void UART_SendChar(uint32_t UART_BASE, uint8_t TX_Char)
+void UART_Putchar(uint32_t UART_BASE, char TX_Char)
 {
 	/* Wait while the UART is busy */
 	while(HWREG(UART_BASE + UART_O_FR) & UART_FR_BUSY);
@@ -58,7 +58,7 @@ void UART_SendChar(uint32_t UART_BASE, uint8_t TX_Char)
 
 
 
-void UART_SendString(uint8_t UART_Num, uint8_t* TX_String)
+void UART_Putchar_n(uint8_t UART_Num, char* TX_String)
 {
 	/* Error handling - Assert the given UART number is valid */
 	ASSERT( UART_Num <= 7 );
@@ -67,7 +67,7 @@ void UART_SendString(uint8_t UART_Num, uint8_t* TX_String)
 	uint32_t Length = strlen((const char*)TX_String);
 	for(i=0; i < Length; i++)
 	{
-		UART_SendChar(UARTBase[UART_Num], TX_String[i]);
+		UART_Putchar(UARTBase[UART_Num], TX_String[i]);
 	}
 }
 

@@ -19,7 +19,7 @@
 /*****************************************
  *      Priorities of Tasks              *
  *****************************************/
-#define PRIORITY_LOGGER_TASK			0
+#define PRIORITY_BB_COMM_TASK			0
 
 
 /*****************************************
@@ -35,7 +35,8 @@
  ***************************************/
 typedef enum
 {
-	Main = 1
+	Main = 1,
+	BB_Comm = 2
 } Sources;
 
 
@@ -65,8 +66,10 @@ typedef enum
 typedef struct MsgStruct
 {
 	uint8_t Source;
-	char Msg[100];
-	float Value;
+	char LogLevel[100];
+	char Msg[200];
+	float Data_float1;
+	float Data_float2;
 } MsgStruct;
 
 

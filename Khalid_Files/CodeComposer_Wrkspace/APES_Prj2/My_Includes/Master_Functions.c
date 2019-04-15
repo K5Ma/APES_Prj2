@@ -19,9 +19,11 @@
 
 //My includes
 #include "Global_Defines.h"
+#include "My_UART.h"
 
 
-void Log_UART(uint8_t Src, char* LogLvl, char* Msg)
+
+void Log_UART0(float CurrTime, uint8_t Src, char* LogLvl, char* Msg)
 {
 	/* Get name of source */
 	char* Source_text;
@@ -31,15 +33,27 @@ void Log_UART(uint8_t Src, char* LogLvl, char* Msg)
 			Source_text = "Main";
 			break;
 
+		case BB_Comm:
+			Source_text = "BB_Comm";
+			break;
+
 		default:
 			Source_text = "Unknown";
 			break;
 	}
 
-	char Time_mS[20];
+	/* Convert all data into a string */
+	char UART0_Log[150];
+	snprintf(UART0_Log, 150, "> [%.3f] %s Task (%s) => %s\n\r", CurrTime, Source_text, LogLvl, Msg);
 
-	snprintf( Time_mS, 20, "%.3f", (float)xTaskGetTickCount()/1000 );
-
-	/* Output error to UART */
-	UARTprintf("[%s] %s Task (%s) => %s\n\n", Time_mS, Source_text, LogLvl, Msg);
+	/* Output to UART0 */
+	UART_Putchar_n(UART0, UART0_Log);
 }
+
+
+
+float GetCurrentTime()
+{
+	return ((float)xTaskGetTickCount())/1000;
+}
+

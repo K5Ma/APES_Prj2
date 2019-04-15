@@ -4,11 +4,20 @@
  *  Created on: Apr 14, 2019
  *      Author: Khalid AlAwadhi
  ---------------------------------------------------------------------------------------------
+ * # LIBRARY VERSION: v1.0
+ *
  * # INFO: A UART Driver library for the Tiva EK-TM4C129XL board
+ *
+ * # DEVLEPOMENT: Developed using Code Composer Studio v9.0
+ *
+ * # LAST UPDATED ON: April 2019 - Used in APES Project 2
  *
  * # NOTES:
  * - Influenced by the example code provided by TI (uartstdio.h), which helped me understand
  *   where and how to begin creating my own driver library.
+ *
+ *  # FUTURE PLANS:
+ *  - NONE
  ---------------------------------------------------------------------------------------------*/
 
 #ifndef MY_INCLUDES_MY_UART_H_
@@ -18,15 +27,15 @@
 
 
 /**************************************************************************************************************
- * USAGE: Helper function called from UART_SendString(). Simply sends a char to the chosen UART.
+ * USAGE: Helper function called from UART_Putchar_n(). Simply sends a char to the chosen UART.
  *
  * PARAMETERS:
  *            - uint32_t UART_BASE => UART base address
- *            - uint8_t TX_Char => Char to send
+ *            - char TX_Char => Char to send
  *
  * RETURNS: NONE
  **************************************************************************************************************/
-void UART_SendChar(uint32_t UART_BASE, uint8_t TX_Char);
+void UART_Putchar(uint32_t UART_BASE, char TX_Char);
 
 
 
@@ -37,11 +46,11 @@ void UART_SendChar(uint32_t UART_BASE, uint8_t TX_Char);
  * 			  - uint8_t UART_Num => The UART to initialize (valid parameters 0-7 as the Tiva only supports 8 UARTs.
  * 			  											    Or simply use UARTx (ex: UART1) but you must include
  * 			  											    Global_Defines.h)
- *            - uint8_t* TX_String => String to send
+ *            - char* TX_String => String to send
  *
  * RETURNS: NONE
  **************************************************************************************************************/
-void UART_SendString(uint8_t UART_Num, uint8_t* TX_String);
+void UART_Putchar_n(uint8_t UART_Num, char* TX_String);
 
 
 

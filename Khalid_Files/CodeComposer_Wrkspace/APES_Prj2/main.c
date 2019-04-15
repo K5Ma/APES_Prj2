@@ -28,10 +28,20 @@
 #include "Global_Defines.h"
 #include "Master_Functions.h"
 #include "My_UART.h"
+#include "BB_Comm_Task.h"
+
 
 
 /* Global Variables */
 
+
+/* LAST WORKING ON:
+ * GETIING LOG_UART0 TO WORK PROPERLY.
+ * NEED TO CONSIDER STACK SIZE NEED MORE INFO ON THAT.
+ * ALSO I INCREASED HEAP SIZE IN PROJECT OPTION TO MATCH FREERTOS CONFIG
+ * NOT SURE WHERE TO CHANGE OPTIONS TO GIVE MAX SOACE FOR EACH OF MY TASKS IF NEEDED
+ * WORK ON RX NEXT!
+ */
 
 
 /*
@@ -49,6 +59,19 @@
  *
  * 5- [] WORK ON RX
  *
+ * 6- [] THINK ABOUT HOW MSGS WILL BE STORED AND TRANSMITTED (CIRC BUFF AND UART? CIRC BUFF WOULD BE SENT TO BB AND
+ * 		 UART IS JUST LOCAL ECHO)
+ *
+ * 7- [COMPLETED] ADD CIRC BUFF LIB
+ * 				L-> ADDED My_CircBuff.h/.c
+ *
+ * 8- [] CREATE TEST STRUCT
+ *
+ * 9- [] TEST STORING AND READING FROM TEST STRUCT
+ *
+ * 10- [] MAYBE DYNAMICALLY ALLOCATE STRING IN Log_UART0()? FOR NOW IT IS A STATIC SIZE
+ *
+ * 11- []
  *
  * +++++++++++++++++++++ QUESTIONS: +++++++++++++++++++++
  * - [FROM HW 5 - STILL NEED TO DOUBLE CHECK] Is the current way I am sending messages correct and efficient? While
@@ -70,32 +93,21 @@ int main()
 	/* Initialize the GPIO pins for the Launchpad */
 	PinoutSet(false, false);
 
-	/////////////////////////////// HUGE TEST //////////////////////////////////////////////
+	/* Init UART0 - Used for local debugging and errors */
 	Init_UARTx(UART0, SYSTEM_CLOCK, 9600);
-	Init_UARTx(UART1, SYSTEM_CLOCK, 9600);
-	Init_UARTx(UART2, SYSTEM_CLOCK, 9600);
-	Init_UARTx(UART3, SYSTEM_CLOCK, 9600);
-	Init_UARTx(UART4, SYSTEM_CLOCK, 9600);
-	Init_UARTx(UART5, SYSTEM_CLOCK, 9600);
-	Init_UARTx(UART6, SYSTEM_CLOCK, 9600);
-	Init_UARTx(UART7, SYSTEM_CLOCK, 9600);
+	Log_UART0(GetCurrentTime(), Main, "INFO", "UART0 was init successfully!");
 
-	while(1)
+	/* Init BB_Comm Task */
+	if(BB_Comm_TaskInit())
 	{
-		UART_SendString(UART0, "Hello from UART0!\n\r");
-		UART_SendString(UART1, "Hello from UART1!\n");
-		UART_SendString(UART2, "Hello from UART2!\n");
-		UART_SendString(UART3, "Hello from UART3!\n");
-		UART_SendString(UART4, "Hello from UART4!\n");
-		UART_SendString(UART5, "Hello from UART5!\n");
-		UART_SendString(UART6, "Hello from UART6!\n");
-		UART_SendString(UART7, "Hello from UART7!\n");
+		Log_UART0(GetCurrentTime(), Main, "CRITICAL", "Could not init BB_Comm Task!");
 	}
-
+	Log_UART0(GetCurrentTime(), Main, "INFO", "BB_Comm Task init successfully!");
 
 	vTaskStartScheduler();
 	return 0;
 }
+
 
 
 
