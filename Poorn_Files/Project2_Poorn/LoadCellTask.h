@@ -10,7 +10,8 @@
 
 #include "main.h"
 
-void adc_all(void *pvParameters);
+void loadcell_all(void *pvParameters);
+//void adc_all(void *pvParameters);
 
 
 

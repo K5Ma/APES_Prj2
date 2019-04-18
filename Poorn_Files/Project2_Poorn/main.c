@@ -52,6 +52,7 @@
 #include "EPaperTask.h"
 #include "LoadCellTask.h"
 #include "BME280Task.h"
+#include "NFCTask.h"
 
 QueueHandle_t log_queue;
 
@@ -141,19 +142,26 @@ int main(void)
 //    }
 //    else        cust_print("\nEPaper Task Created");
 
-//    if(xTaskCreate(adc_all, (const portCHAR *)"ADC",
-//               500, 0, 1, 0) != pdTRUE)
-//    {
-//        cust_print("\nADC Task Creation Failed");
-//    }
-//    else        cust_print("\nADC Task Created");
-
-    if(xTaskCreate(bme280_all, (const portCHAR *)"BME280",
+    if(xTaskCreate(loadcell_all, (const portCHAR *)"LoadCell",
                500, 0, 1, 0) != pdTRUE)
     {
-        cust_print("\nBME280 Task Creation Failed");
+        cust_print("\nLoadCell Task Creation Failed");
     }
-    else        cust_print("\nBME280 Task Created");
+    else        cust_print("\nLoadCell Task Created");
+
+//    if(xTaskCreate(bme280_all, (const portCHAR *)"BME280",
+//               500, 0, 1, 0) != pdTRUE)
+//    {
+//        cust_print("\nBME280 Task Creation Failed");
+//    }
+//    else        cust_print("\nBME280 Task Created");
+
+//    if(xTaskCreate(nfc_all, (const portCHAR *)"NFC",
+//               500, 0, 1, 0) != pdTRUE)
+//    {
+//        cust_print("\nNFC Task Creation Failed");
+//    }
+//    else        cust_print("\nNFC Task Created");
 
 
     vTaskStartScheduler();

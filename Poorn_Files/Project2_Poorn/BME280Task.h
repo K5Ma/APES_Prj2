@@ -10,9 +10,11 @@
 
 #include "main.h"
 
-#define MODE_SLEEP 0b00
-#define MODE_FORCED 0b01
-#define MODE_NORMAL 0b11
+#define BME280_DevID        0x60
+
+#define MODE_SLEEP          0x00
+#define MODE_FORCED         0x01
+#define MODE_NORMAL         0x03
 
 //Register names:
 #define BME280_DIG_T1_LSB_REG           0x88
