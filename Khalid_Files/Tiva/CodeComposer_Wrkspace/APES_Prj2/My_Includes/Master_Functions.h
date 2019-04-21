@@ -9,7 +9,7 @@
 #define MY_INCLUDES_MASTER_FUNCTIONS_H_
 
 #include <stdint.h>
-
+#include "Global_Defines.h"
 
 
 /**************************************************************************************************************
@@ -38,6 +38,18 @@ void Log_UART0(float CurrTime, uint8_t Src, char* LogLvl, char* Msg);
  * RETURNS: float Current_Time_in_ms
  **************************************************************************************************************/
 float GetCurrentTime();
+
+
+
+/**************************************************************************************************************
+ * USAGE: This function XXX
+ *
+ * PARAMETERS:
+ *            - NONE
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+uint8_t SendMsgToBB(MsgStruct *MsgToSend);
 
 
 #endif /* MY_INCLUDES_MASTER_FUNCTIONS_H_ */

@@ -24,6 +24,7 @@
 #include "Master_Functions.h"
 
 /* Global Variables */
+extern QueueHandle_t xQueue_Msgs;
 
 
 uint8_t BB_Comm_TaskInit()
@@ -48,11 +49,33 @@ uint8_t BB_Comm_TaskInit()
 
 void BB_Comm_Task(void *pvParameters)
 {
-//	int a = 1;
+	/* Create a queue capable of containing 50 messages */
+	xQueue_Msgs = xQueueCreate( 50, sizeof( MsgStruct ) );
+
+	if( xQueue_Msgs == NULL )
+	{
+		/* Queue was not created and must not be used. */
+		Log_UART0(GetCurrentTime(), BB_Comm, "CRITICAL", "Could not create xQueue_Msgs! x_x");
+	}
+	else
+	{
+		Log_UART0(GetCurrentTime(), BB_Comm, "INFO", "Created xQueue_Msgs successfully!");
+	}
+
+	/* Variable that will store and decode received messages */
+	struct MsgStruct RXMessage;
 
 	while(1)
 	{
-		Log_UART0(GetCurrentTime(), BB_Comm, "INFO", "Hi I am alive!");
-	}
+		if( xQueue_Msgs != 0 )
+		{
+			/* Receive a message on the created queue.
+			 * Block for 10 ticks if a message is not immediately available */
+			if( xQueueReceive( xQueue_Msgs, &RXMessage, ( TickType_t ) 10 ) )
+			{
+				//HERE IS WHERE I NEED TO SEND DAT TO BB
 
+			}
+		}
+	}
 }

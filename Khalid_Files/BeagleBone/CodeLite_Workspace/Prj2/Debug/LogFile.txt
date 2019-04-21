@@ -1,0 +1,10 @@
+[1555797447.292757] TivaComm Thread: Logfile successfully created! TID: 3441
+
+***************************************
+*     APES Project 2 (BeagleBone):    *
+*       *insert cool name here*       *
+*                                     *
+*  By: Khalid AlAwadhi | Poorn Mehta  *
+*                         v1.0        *
+***************************************
+

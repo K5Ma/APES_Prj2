@@ -65,9 +65,10 @@ typedef enum
  *****************************************/
 typedef struct MsgStruct
 {
+	float Timestamp;
 	uint8_t Source;
-	char LogLevel[100];
-	char Msg[200];
+	char LogLevel[20];
+	char Msg[80];
 	float Data_float1;
 	float Data_float2;
 } MsgStruct;

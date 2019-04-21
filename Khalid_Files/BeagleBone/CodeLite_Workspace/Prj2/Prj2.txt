@@ -1,0 +1,1 @@
+./Debug/main.c.o ./Debug/Master_Functions.c.o ./Debug/TivaComm_Thread.c.o ./Debug/My_UART_BB.c.o
