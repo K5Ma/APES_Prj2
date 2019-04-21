@@ -53,6 +53,9 @@
 #include "LoadCellTask.h"
 #include "BME280Task.h"
 #include "NFCTask.h"
+#include "ServoTask.h"
+#include "SpeakJetTask.h"
+#include "OutputIndicatorsTask.h"
 
 QueueHandle_t log_queue;
 
@@ -100,6 +103,8 @@ int main(void)
     // Set up the UART which is connected to the virtual COM port
     UARTStdioConfig(0, 115200, SYSTEM_CLOCK);
 
+    cust_print("\nProgram Start");
+
 //    GPIOPinTypeGPIOOutput(GPIO_PORTM_BASE, GPIO_PIN_6);
 //    GPIOPinTypeGPIOOutput(GPIO_PORTQ_BASE, GPIO_PIN_1);
 
@@ -135,26 +140,26 @@ int main(void)
 //    }
 //    else        cust_print("\nTEMP Task Created");
 
-//    if(xTaskCreate(epaper_all, (const portCHAR *)"EPaper",
+//    if(xTaskCreate(EPaperTask, (const portCHAR *)"EPaper",
 //               500, 0, 1, 0) != pdTRUE)
 //    {
 //        cust_print("\nEPaper Task Creation Failed");
 //    }
 //    else        cust_print("\nEPaper Task Created");
 
-    if(xTaskCreate(loadcell_all, (const portCHAR *)"LoadCell",
-               500, 0, 1, 0) != pdTRUE)
-    {
-        cust_print("\nLoadCell Task Creation Failed");
-    }
-    else        cust_print("\nLoadCell Task Created");
-
-//    if(xTaskCreate(bme280_all, (const portCHAR *)"BME280",
+//    if(xTaskCreate(LoadCellTask, (const portCHAR *)"LoadCell",
 //               500, 0, 1, 0) != pdTRUE)
 //    {
-//        cust_print("\nBME280 Task Creation Failed");
+//        cust_print("\nLoadCell Task Creation Failed");
 //    }
-//    else        cust_print("\nBME280 Task Created");
+//    else        cust_print("\nLoadCell Task Created");
+
+    if(xTaskCreate(bme280_all, (const portCHAR *)"BME280",
+               500, 0, 1, 0) != pdTRUE)
+    {
+        cust_print("\nBME280 Task Creation Failed");
+    }
+    else        cust_print("\nBME280 Task Created");
 
 //    if(xTaskCreate(nfc_all, (const portCHAR *)"NFC",
 //               500, 0, 1, 0) != pdTRUE)
@@ -162,6 +167,27 @@ int main(void)
 //        cust_print("\nNFC Task Creation Failed");
 //    }
 //    else        cust_print("\nNFC Task Created");
+
+//    if(xTaskCreate(ServoTask, (const portCHAR *)"Servo",
+//               500, 0, 1, 0) != pdTRUE)
+//    {
+//        cust_print("\nServo Task Creation Failed");
+//    }
+//    else        cust_print("\nServo Task Created");
+
+//    if(xTaskCreate(OutputIndicatorsTask, (const portCHAR *)"OutputIndicators",
+//               500, 0, 1, 0) != pdTRUE)
+//    {
+//        cust_print("\nOutputIndicators Task Creation Failed");
+//    }
+//    else        cust_print("\nOutputIndicators Task Created");
+
+//    if(xTaskCreate(SpeakJetTask, (const portCHAR *)"SpeakJet",
+//               500, 0, 1, 0) != pdTRUE)
+//    {
+//        cust_print("\nSpeakJet Task Creation Failed");
+//    }
+//    else        cust_print("\nSpeakJet Task Created");
 
 
     vTaskStartScheduler();

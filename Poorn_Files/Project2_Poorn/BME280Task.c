@@ -211,7 +211,7 @@ void bme280_gethum(float *var_h)
 {
     static uint32_t sensor_data[3];
     static int32_t adc_hum;
-    static int64_t var1, var2;
+    static int64_t var1;
 
     spi_read_multireg(&sensor_data[0], BME280_HUMIDITY_MSB_REG, 2);
     adc_hum = ((uint32_t)sensor_data[0] << 8) | ((uint32_t)sensor_data[1]);

@@ -1,46 +1,35 @@
 /*
  * LoadCellTask.c
  *
- *  Created on: Apr 13, 2019
- *      Author: poorn
+ *  Last Update: Apr 19, 2019
+ *      Author: Poorn Mehta
+ *
+ *  Driver for reading LoadCell values connected to HX711 Amplifier which is connected to
+ *  TM4C1294XL (TIVA Development Board) using 2 digital pins
+ *
+ *  This driver code is developed based on provided documentation from the manufacturer
+ *
+ */
+
+/*
+ *
+ * Hardware Connections
+ *
+ * Note: This module is not using any standard interface (e.g. TWI/I2C)
+ *       Moreover, this driver aims to solve a specific problem - and not
+ *       calculate acutal force. It can be done with minor modifications though.
+ *
+ * Note: Left Side - Module Pins & Right Side - Controller Pins
+ *
+ * VDD - 3.3V (This is the voltage level of interface)
+ * VCC - 5V (This is the voltage which will be provided to the LoadCell as excitation)
+ * DAT - PM5 (This is the data pin)
+ * CLK - PM4 (This is the clock pin)
+ * GND - Ground
+ *
  */
 
 #include "LoadCellTask.h"
-
-#include <stdint.h>
-#include <stdbool.h>
-#include "drivers/pinout.h"
-#include "utils/uartstdio.h"
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-
-#include "inc/hw_ints.h"
-#include "inc/hw_memmap.h"
-#include "inc/hw_i2c.h"
-#include "inc/hw_sysctl.h"
-#include "inc/hw_types.h"
-#include "inc/hw_uart.h"
-#include "inc/hw_adc.h"
-
-#include "driverlib/debug.h"
-#include "driverlib/gpio.h"
-#include "driverlib/interrupt.h"
-#include "driverlib/pin_map.h"
-#include "driverlib/uart.h"
-#include "driverlib/timer.h"
-#include "driverlib/fpu.h"
-#include "driverlib/adc.h"
-
-// TivaWare includes
-#include "driverlib/sysctl.h"
-#include "driverlib/debug.h"
-#include "driverlib/rom.h"
-#include "driverlib/interrupt.h"
-#include "driverlib/i2c.h"
-
-#include "sensorlib/i2cm_drv.h"
 
 // FreeRTOS includes
 #include "FreeRTOSConfig.h"
@@ -48,108 +37,357 @@
 #include "task.h"
 #include "queue.h"
 
-uint8_t us_flag = 0;
+// Variables that will be shared between functions
+uint8_t LC_us = 0;
+uint8_t LC_Retries;
+bool LC_Error;
 
-void T0ISR(void)
+/*
+ * Function to handle timer0 interrupts
+ * (triggering at every 1 microsecond, when timer is running)
+ *
+ * Param: Null
+ *
+ * Return: Null
+ *
+ */
+void LC_Timer0ISR(void)
 {
     TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
-    us_flag = 1;
+    LC_us = 1;
 }
 
-void loadcell_all(void *pvParameters)
+/*
+ * Function to initialize timer0
+ *
+ * Param: Null
+ *
+ * Return: Null
+ *
+ */
+void LC_TimerInit(void)
 {
-    static char tp[50];
-    static uint32_t data;
-    static int i;
-
     SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
     TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);
-    TimerLoadSet(TIMER0_BASE, TIMER_A, (SYSTEM_CLOCK/100000));
+    TimerLoadSet(TIMER0_BASE, TIMER_A, (SYSTEM_CLOCK/1000000));
     IntMasterEnable();
-    TimerIntRegister(TIMER0_BASE, TIMER_A, T0ISR);
+    TimerIntRegister(TIMER0_BASE, TIMER_A, LC_Timer0ISR);
     IntEnable(INT_TIMER0A);
     TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
     cust_print("\nTimer Init Success");
+}
 
+/*
+ * Function to initialize GPIO pins
+ *
+ * Param: Null
+ *
+ * Return: Null
+ *
+ */
+void LC_DriverInit(void)
+{
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOM);
     GPIOPinTypeGPIOOutput(GPIO_PORTM_BASE, GPIO_PIN_4); //clk
     GPIOPinTypeGPIOInput(GPIO_PORTM_BASE, GPIO_PIN_5); //data
+}
 
-//    GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_4, GPIO_PIN_4);
-    vTaskDelay(3000);
+/*
+ * Function to send the digital High portion of the clock pulse
+ * It keeps it high for 1 microsecond
+ *
+ * Param: Null
+ *
+ * Return: Null
+ *
+ */
+void LC_SetClkHigh(void)
+{
+    LC_us = 0;
+    GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_4, GPIO_PIN_4);
+    TimerEnable(TIMER0_BASE, TIMER_A);
+    while(LC_us == 0);
+    TimerDisable(TIMER0_BASE, TIMER_A);
+}
 
-//    static uint32_t prev = 0;
-    static uint32_t stat = 0;
-//
-//    while(1)
-//    {
-//        stat = GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_5);
-//        if(stat != prev)
-//        {
-//            snprintf(tp, sizeof(tp), "\nOld: %d New: %d", prev, stat);
-//            cust_print(tp);
-//            prev = stat;
-//        }
-//        vTaskDelay(1);
-//    }
+/*
+ * Function to send the digital Low portion of the clock pulse
+ * It keeps it low for 1 microsecond
+ *
+ * Param: Null
+ *
+ * Return: Null
+ *
+ */
+void LC_SetClkLow(void)
+{
+    LC_us = 0;
+    GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_4, false);
+    TimerEnable(TIMER0_BASE, TIMER_A);
+    while(LC_us == 0);
+    TimerDisable(TIMER0_BASE, TIMER_A);
+}
 
-    // start
-    cust_print("\nNormal Operation Start");
-    while(1)
+/*
+ * Function to assert the clock pin at digital Low level
+ *
+ * Param: Null
+ *
+ * Return: Null
+ *
+ */
+void LC_ClearClk(void)
+{
+    GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_4, false);
+}
+
+/*
+ * Function to read the Data pin state at given time
+ *
+ * Param: Null
+ *
+ * Return: Boolean pin status
+ *
+ */
+bool LC_ReadDataPinStatus(void)
+{
+    static uint32_t stat;
+    stat = 0;
+    stat = GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_5) & 0x00FF;
+    return (stat >> 5);
+}
+
+/*
+ * Function to (1) Wait for a valid new sample to be available from the module
+ * and (2) To check that the module is functioning properly. In case of the
+ * detected failure, proper variables will be set to reflect this state
+ *
+ * Param: Null
+ *
+ * Return: Null
+ *
+ */
+void LC_TestSensor(void)
+{
+    static uint16_t noresptime;
+
+    noresptime = 0;
+    LC_Error = false;
+
+    while(LC_ReadDataPinStatus() == true)
     {
-        GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_4, false);
-        stat = GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_5) & 0x00FF;
-        stat >>= 5;
-        while(stat == 1)
+        vTaskDelay(1);
+        noresptime += 1;
+        if(noresptime >= LC_ModuleNotRespondingTimeoutms)
         {
-            stat = GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_5) & 0x00FF;
-            stat >>= 5;
-            vTaskDelay(1);
+            LC_Error = true;
+            #if     (LC_Retry_Mode == LC_Limited)
+                LC_Retries = LC_Max_Retries;
+            #endif
+            break;
         }
+    }
+}
 
-        data = 0;
+/*
+ * Function to read data from the module, and convert it to float volts
+ *
+ * Param: Null
+ *
+ * Return: Float voltage which is converted from ADC reading value
+ *
+ */
+float LC_ReadLoadCellVoltage(void)
+{
+    static uint32_t data;
+    static int i;
+    data = 0;
+    for(i = 23; i >= 0; i --)
+    {
+        LC_SetClkHigh();
+        if(LC_ReadDataPinStatus())     data |= (1 << i);
+        LC_SetClkLow();
+    }
+    LC_SetClkHigh();
+    LC_SetClkLow();
 
-        for(i = 23; i >= 0; i --)
-        {
-            us_flag = 0;
-            GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_4, GPIO_PIN_4);
-            TimerEnable(TIMER0_BASE, TIMER_A);
-            while(us_flag == 0);
-            TimerDisable(TIMER0_BASE, TIMER_A);
-
-            stat = GPIOPinRead(GPIO_PORTM_BASE, GPIO_PIN_5) & 0x00FF;
-            stat >>= 5;
-            if(stat == 1)     data |= (1 << i);
-
-            us_flag = 0;
-            GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_4, false);
-            TimerEnable(TIMER0_BASE, TIMER_A);
-            while(us_flag == 0);
-            TimerDisable(TIMER0_BASE, TIMER_A);
-        }
-
-        us_flag = 0;
-        GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_4, GPIO_PIN_4);
-        TimerEnable(TIMER0_BASE, TIMER_A);
-        while(us_flag == 0);
-        TimerDisable(TIMER0_BASE, TIMER_A);
-
-        us_flag = 0;
-        GPIOPinWrite(GPIO_PORTM_BASE, GPIO_PIN_4, false);
-        TimerEnable(TIMER0_BASE, TIMER_A);
-        while(us_flag == 0);
-        TimerDisable(TIMER0_BASE, TIMER_A);
-
-//        snprintf(tp, sizeof(tp), "\nRaw: %x", data);
-        cust_print(tp);
-
-        data &= 0x00FFFFFF;
+    data &= 0x00FFFFFF;
+    if(data == 0x800000)  return 0;
+    else if(data == 0x7FFFFF)   return 3.3;
+    else
+    {
         data ^= 0x00FFFFFF;
         data += 1;
-
-        snprintf(tp, sizeof(tp), "\nNew: %d", data);
-        cust_print(tp);
+        return (((float)data / 16777216.0) * 3.3);
     }
+}
+
+/*
+ *
+ * Callback Function for Load Cell Task
+ *
+ * Return: Null
+ *
+ */
+void LoadCellTask(void *pvParameters)
+{
+    LC_Error = false;
+
+    static char tp[50];
+    static uint16_t millivolts;
+
+    LC_TimerInit();
+
+    LC_DriverInit();
+
+    /*
+     * This portion just tests the Load Cell individually
+     * It doesn't rely on anything that is not covered
+     * or provided by its own header and source files
+     *
+     * This mode is only for raw testing, and does not
+     * include any of the error checking feature(s)
+     */
+#if     LC_INDIVIDUAL_TESTING
+
+    static uint8_t valid;
+
+    while(1)
+    {
+        LC_ClearClk();
+
+        while(LC_ReadDataPinStatus() == true)   vTaskDelay(1);
+
+        millivolts = (LC_ReadLoadCellVoltage() * 1000);
+
+        if((millivolts > LC_FilterLowThresholdmv) && (millivolts < LC_FilterHighThresholdmv))
+        {
+            if((millivolts >= LC_VerificationLowmv) && (millivolts <= LC_VerificationHighmv))    valid += 1;
+            else    valid = 0;
+
+            if(valid >= LC_ConsecutiveVerificationNeeded)
+            {
+                cust_print("\n>>>>>>>>>>>>DOOR OPEN<<<<<<<<<<<<<<<");
+                valid = 0;
+            }
+
+            snprintf(tp, sizeof(tp), "\nMillivolts: %d", millivolts);
+            cust_print(tp);
+        }
+        else
+        {
+            #if     LC_DEBUG_PRINTF
+                        cust_print("\nLoadCell Voltage is outside Valid Range");
+            #endif
+        }
+
+        vTaskDelay((1000 / LC_PollingFrequencyHz));
+    }
+
+#else
+
+    /*
+     * Normal Operation (Parameters and Returns indicate communication with Central Task)
+     *
+     * This Task should get 1 parameter from central task through IPC
+     *
+     * This Task will have 1 array of LC_MaxSamples length - all in uint16_t
+     * that should be reported back to the central task through IPC
+     *
+     * If the device failure is detected, it is kept limited to the
+     * Remote Node itself. This may sound like a design which would
+     * introduce some limitations, however for this specific application,
+     * it is beneficial to prevent flooding communication channel with
+     * relatively not so important data.
+     *
+     * Param_1: bool Poll_LoadCell
+     *          (false: don't do anything, true: start polling Load Cell)
+     *
+     * Return: uint16_t LC_SamplesArraymv[LC_MaxSamples]
+     *          (this will have samples recorded on specified frequency, which are to be
+     *           processed by Control Node and take a decision. Therefore, the entire array
+     *           must be transferred to Central Task through proper IPC method. In case of
+     *           the sensor failure, the array will be filled with zeroes.)
+     *
+     */
+
+    static uint8_t storedsamplecount, idletimecount;
+    static uint16_t LC_SamplesArraymv[LC_MaxSamples];
+
+    idletimecount = 0;
+
+    while(1)
+    {
+        // Check the status of Load Cell on regular intervals
+        if(idletimecount >= (LC_Online_Test_Timems / LC_Polling_Timems))    LC_TestSensor();
+
+        // If the Load Cell module seems to be offline, try to get it back online
+        // by reinitializing the interface, and waiting for a valid sample with timeout
+        // This feature supports both - limited and infinite retry modes
+        if(LC_Error == true)
+        {
+        #if     (LC_Retry_Mode == LC_Limited)
+            if(LC_Retries != 0x00)
+            {
+                LC_Retries -= 1;
+        #endif
+                LC_TimerInit();
+                LC_DriverInit();
+                LC_TestSensor();
+        #if     (LC_Retry_Mode == LC_Limited)
+            }
+        #endif
+        }
+
+        if((Poll_LoadCell == true) && (LC_Error == false))
+        {
+            storedsamplecount = 0;
+
+            // Taking samples till the entire array is filled up
+            while(storedsamplecount <= LC_MaxSamples)
+            {
+
+                // Clearing the clock because it should be idle when not reading
+                // anything from the module
+                LC_ClearClk();
+
+                // Resetting the variable used to sense the timeout
+                noresptime = 0;
+
+                // Testing sensor/waiting for the module to have a valid sample ready
+                LC_TestSensor();
+
+                // Proceed only if there was no timeout, otherwise - write a 0 in the array
+                if(LC_Error == false)
+                {
+
+                    // Converting float voltages to integer millivolts (to save size)
+                    millivolts = (LC_ReadLoadCellVoltage() * 1000);
+
+                    // Filtering samples - so that the processing on the Control Node becomes easier
+                    if((millivolts > LC_FilterLowThresholdmv) && (millivolts < LC_FilterHighThresholdmv))   LC_SamplesArraymv[storedsamplecount ++] = millivolts;
+                    else        LC_SamplesArraymv[storedsamplecount ++] = 0;
+                    #if     LC_DEBUG_PRINTF
+                            snprintf(tp, sizeof(tp), "\nMillivolts: %d", millivolts);
+                            cust_print(tp);
+                    #endif
+                }
+
+                // There was a timeout, write a 0
+                else        LC_SamplesArraymv[storedsamplecount ++] = 0;
+
+                // Waiting for period defined by polling frequency of the sensor
+                vTaskDelay((1000 / LC_PollingFrequencyHz));
+            }
+        }
+
+        // Nothing important to do. Just wait
+        vTaskDelay(LC_Polling_Timems);
+        idletimecount += 1;
+    }
+#endif
+
+
 }
 
 //void adc_all(void *pvParameters)
