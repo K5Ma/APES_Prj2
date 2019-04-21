@@ -154,7 +154,7 @@ int main(void)
 //    }
 //    else        cust_print("\nLoadCell Task Created");
 
-    if(xTaskCreate(bme280_all, (const portCHAR *)"BME280",
+    if(xTaskCreate(BME280Task, (const portCHAR *)"BME280",
                500, 0, 1, 0) != pdTRUE)
     {
         cust_print("\nBME280 Task Creation Failed");

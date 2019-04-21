@@ -1,7 +1,8 @@
 /*
  * LoadCellTask.c
  *
- *  Last Update: Apr 19, 2019
+ *  Created on: Apr 13, 2019
+ *  Last Update: Apr 21, 2019
  *      Author: Poorn Mehta
  *
  *  Driver for reading LoadCell values connected to HX711 Amplifier which is connected to
@@ -74,7 +75,6 @@ void LC_TimerInit(void)
     TimerIntRegister(TIMER0_BASE, TIMER_A, LC_Timer0ISR);
     IntEnable(INT_TIMER0A);
     TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
-    cust_print("\nTimer Init Success");
 }
 
 /*
@@ -237,8 +237,11 @@ void LoadCellTask(void *pvParameters)
     static uint16_t millivolts;
 
     LC_TimerInit();
-
     LC_DriverInit();
+
+    #if     LC_DEBUG_PRINTF
+                cust_print("\nLoadCell Init Completed");
+    #endif
 
     /*
      * This portion just tests the Load Cell individually
@@ -293,21 +296,19 @@ void LoadCellTask(void *pvParameters)
      *
      * This Task will have 1 array of LC_MaxSamples length - all in uint16_t
      * that should be reported back to the central task through IPC
-     *
-     * If the device failure is detected, it is kept limited to the
-     * Remote Node itself. This may sound like a design which would
-     * introduce some limitations, however for this specific application,
-     * it is beneficial to prevent flooding communication channel with
-     * relatively not so important data.
+     * It will also report back the current state of the LoadCell
      *
      * Param_1: bool Poll_LoadCell
      *          (false: don't do anything, true: start polling Load Cell)
      *
-     * Return: uint16_t LC_SamplesArraymv[LC_MaxSamples]
+     * Return_1: uint16_t LC_SamplesArraymv[LC_MaxSamples]
      *          (this will have samples recorded on specified frequency, which are to be
      *           processed by Control Node and take a decision. Therefore, the entire array
      *           must be transferred to Central Task through proper IPC method. In case of
      *           the sensor failure, the array will be filled with zeroes.)
+     *
+     * Return_2: bool LC_Error
+     *           (false: Online, true: OFfline - error present)
      *
      */
 
@@ -319,7 +320,16 @@ void LoadCellTask(void *pvParameters)
     while(1)
     {
         // Check the status of Load Cell on regular intervals
-        if(idletimecount >= (LC_Online_Test_Timems / LC_Polling_Timems))    LC_TestSensor();
+        if(idletimecount >= (LC_Online_Test_Timems / LC_Polling_Timems))
+        {
+            LC_TestSensor();
+            #if     LC_DEBUG_PRINTF
+                    cust_print("\nChecking LoadCell Status...");
+                    if(LC_Error == false)   cust_print("\nLoadCell is Online");
+                    else    cust_print("\nLoadCell is Offline");
+            #endif
+            idletimecount = 0;
+        }
 
         // If the Load Cell module seems to be offline, try to get it back online
         // by reinitializing the interface, and waiting for a valid sample with timeout
@@ -379,6 +389,9 @@ void LoadCellTask(void *pvParameters)
                 // Waiting for period defined by polling frequency of the sensor
                 vTaskDelay((1000 / LC_PollingFrequencyHz));
             }
+
+            // Resetting polling flag
+            Poll_LoadCell = false;
         }
 
         // Nothing important to do. Just wait

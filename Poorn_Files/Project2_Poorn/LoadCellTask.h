@@ -2,7 +2,14 @@
  * LoadCellTask.h
  *
  *  Created on: Apr 13, 2019
- *      Author: poorn
+ *  Last Update: Apr 21, 2019
+ *      Author: Poorn Mehta
+ *
+ *  Driver for reading LoadCell values connected to HX711 Amplifier which is connected to
+ *  TM4C1294XL (TIVA Development Board) using 2 digital pins
+ *
+ *  This driver code is developed based on provided documentation from the manufacturer
+ *
  */
 
 #ifndef LOADCELLTASK_H_

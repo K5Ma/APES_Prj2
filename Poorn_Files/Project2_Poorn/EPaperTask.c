@@ -2,7 +2,7 @@
  * EPaperTask.c
  *
  *  Created on: Apr 12, 2019
- *  Last Update: Apr 19, 2019
+ *  Last Update: Apr 21, 2019
  *      Author: Poorn Mehta
  *
  *  Driver for displaying images residing in SD card on Waveshare 4.3Inch UART E-Paper Display
@@ -346,10 +346,6 @@ void EPaperTask(void *pvParameters)
 
     EP_Error = false;
 
-    static uint8_t idletimecount;
-
-    idletimecount = 0;
-
     // This is completely optional
     // I use it to have enough time to open serial monitor
     // and to start logic analyzer when needed :P
@@ -400,13 +396,10 @@ void EPaperTask(void *pvParameters)
          *
          * This Task should get 2 parameters from central task through IPC
          *
-         * This Task has nothing to report to / send back to the Control Node
+         * This Task has no data to report to / send back to the Control Node
+         * It only reports back a boolean indicating current state of the EPaper
+         * (false: offline. true: online)
          *
-         * If the device failure is detected, it is kept limited to the
-         * Remote Node itself. This may sound like a design which would
-         * introduce some limitations, however for this specific application,
-         * it is beneficial to prevent flooding communication channel with
-         * relatively not so important data.
          *
          * Param_1: bool Update_EPaper
          *          (false: don't do anything, true: update the EPaper Display)
@@ -417,9 +410,15 @@ void EPaperTask(void *pvParameters)
          *           the image name can't be more than 10 characters in length,
          *           including the '.')
          *
+         * Return: bool EP_Error
+         *         (false: Online, true: OFfline - error present)
+         *
          */
 
         static char Image_Name_Local[10];
+        static uint8_t idletimecount;
+
+        idletimecount = 0;
 
         while(1)
         {
@@ -428,10 +427,12 @@ void EPaperTask(void *pvParameters)
             if(idletimecount >= (EP_Online_Test_Timems / EP_Reset_Timems))
             {
                 idletimecount = 0;
+                EP_Send_Command(EP_CMD_Handshake, EP_Handshake_Type);
                 #if     EP_DEBUG_PRINTF
                     cust_print("\nChecking EPaper Status... Command: Handshake");
+                    if(EP_Error == false)   cust_print("\nEPaper is Online");
+                    else    cust_print("\nEPaper if Offline");
                 #endif
-                    EP_Send_Command(EP_CMD_Handshake, EP_Handshake_Type);
             }
 
             // Attempting to communicate with EPaper while supporting both
@@ -460,9 +461,9 @@ void EPaperTask(void *pvParameters)
                                 cust_print("\nEPaper is Online now");
                             #endif
                         }
-#if     (EP_Retry_Mode == EP_Limited)
+            #if     (EP_Retry_Mode == EP_Limited)
                 }
-#endif
+            #endif
             }
 
             if((Update_EPaper == true) && (EP_Error == false))
