@@ -59,6 +59,16 @@ extern void xPortPendSVHandler(void);
 extern void vPortSVCHandler(void);
 extern void xPortSysTickHandler(void);
 
+/* My additions */
+extern void UART0_IntHandler(void);
+extern void UART1_IntHandler(void);
+extern void UART2_IntHandler(void);
+extern void UART3_IntHandler(void);
+extern void UART4_IntHandler(void);
+extern void UART5_IntHandler(void);
+extern void UART6_IntHandler(void);
+extern void UART7_IntHandler(void);
+
 
 //*****************************************************************************
 //
@@ -92,8 +102,8 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // GPIO Port C
     IntDefaultHandler,                      // GPIO Port D
     IntDefaultHandler,                      // GPIO Port E
-    IntDefaultHandler,                      // UART0 Rx and Tx
-    IntDefaultHandler,                      // UART1 Rx and Tx
+	UART0_IntHandler,                       // UART0 Rx and Tx
+	UART1_IntHandler,               	    // UART1 Rx and Tx
     IntDefaultHandler,                      // SSI0 Rx and Tx
     IntDefaultHandler,                      // I2C0 Master and Slave
     IntDefaultHandler,                      // PWM Fault
@@ -143,11 +153,11 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // GPIO Port L
     IntDefaultHandler,                      // SSI2 Rx and Tx
     IntDefaultHandler,                      // SSI3 Rx and Tx
-    IntDefaultHandler,                      // UART3 Rx and Tx
-    IntDefaultHandler,                      // UART4 Rx and Tx
-    IntDefaultHandler,                      // UART5 Rx and Tx
-    IntDefaultHandler,                      // UART6 Rx and Tx
-    IntDefaultHandler,                      // UART7 Rx and Tx
+	UART3_IntHandler,                       // UART3 Rx and Tx
+	UART4_IntHandler,                       // UART4 Rx and Tx
+	UART5_IntHandler,                       // UART5 Rx and Tx
+	UART6_IntHandler,                       // UART6 Rx and Tx
+	UART7_IntHandler,                       // UART7 Rx and Tx
     IntDefaultHandler,                      // I2C2 Master and Slave
     IntDefaultHandler,                      // I2C3 Master and Slave
     IntDefaultHandler,                      // Timer 4 subtimer A

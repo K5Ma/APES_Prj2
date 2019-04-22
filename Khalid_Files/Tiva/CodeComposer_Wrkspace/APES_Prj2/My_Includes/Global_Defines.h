@@ -22,12 +22,6 @@
 #define PRIORITY_BB_COMM_TASK			0
 
 
-/*****************************************
- *      UART Defines                     *
- *****************************************/
-#define UART_PORT						0
-#define UART_BAUD						9600
-
 
 /***************************************
  *  Task Numbering Enum:               *
@@ -38,25 +32,6 @@ typedef enum
 	Main = 1,
 	BB_Comm = 2
 } Sources;
-
-
-
-/***************************************
- *  All available UARTs Enums:         *
- *  Used in various functions to make  *
- *  things simpler                     *
- ***************************************/
-typedef enum
-{
-	UART0 = 0,
-	UART1 = 1,
-	UART2 = 2,
-	UART3 = 3,
-	UART4 = 4,
-	UART5 = 5,
-	UART6 = 6,
-	UART7 = 7
-} UART_Bases;
 
 
 

@@ -20,9 +20,15 @@
 #include "inc/hw_types.h"
 #include "inc/hw_uart.h"
 #include "driverlib/debug.h"
+#include "inc/hw_ints.h"
+#include "driverlib/interrupt.h"
 
 //My includes
 #include "Global_Defines.h"
+
+/* Global variables */
+extern char BB_Recv[100];
+extern uint16_t BB_Recv_Index;
 
 
 /*******************************************************************
@@ -46,6 +52,16 @@ static const uint32_t UARTBase[8] =
 	 UART6_BASE, UART7_BASE
 };
 
+
+/*******************************************************************
+ * List of UART Interrupts
+ *******************************************************************/
+static const uint32_t UARTInt[8] =
+{
+ 	 INT_UART0, INT_UART1, INT_UART2,
+	 INT_UART3, INT_UART4, INT_UART5,
+	 INT_UART6, INT_UART7
+};
 
 
 void UART_Putchar(uint32_t UART_BASE, char TX_Char)
@@ -73,7 +89,7 @@ void UART_Putchar_n(uint8_t UART_Num, char* TX_String)
 
 
 
-void Init_UARTx(uint8_t UART_Num, uint32_t Clock, uint32_t BaudRate)
+void Init_UARTx(uint8_t UART_Num, uint32_t Clock, uint32_t BaudRate, bool Interrupt_EN)
 {
 	/* Error handling - Assert the given UART number is valid */
 	ASSERT( UART_Num <= 7 );
@@ -145,6 +161,112 @@ void Init_UARTx(uint8_t UART_Num, uint32_t Clock, uint32_t BaudRate)
 	 * Other parameters are chosen by user.
 	 * Enables it afterwards */
 	UARTConfigSetExpClk(UARTBase[UART_Num], Clock, BaudRate, (UART_CONFIG_PAR_NONE | UART_CONFIG_STOP_ONE | UART_CONFIG_WLEN_8));
+
+	if(Interrupt_EN)
+	{
+		/* Enable UART interrupts */
+		IntEnable(UARTInt[UART_Num]);
+
+		/* Enable RX interrupts */
+		UARTIntEnable(UARTBase[UART_Num], UART_INT_RX | UART_INT_RT);
+	}
 }
 
 
+void UART0_IntHandler(void)
+{
+	/* Get interrupts */
+	uint32_t Flags =  UARTIntStatus(UART0_BASE, true);
+
+	/* Clear the asserted interrupts */
+	UARTIntClear(UART0_BASE, Flags);
+
+	//NO FUCNTIONALITY IMPLEMENTED FOR THIS UART HANDLER
+}
+
+void UART1_IntHandler(void)
+{
+	/* Get interrupts */
+	uint32_t Flags =  UARTIntStatus(UART1_BASE, true);
+
+	/* Clear the asserted interrupts */
+	UARTIntClear(UART1_BASE, Flags);
+
+	/*Loop while there are characters in the receive FIFO */
+	while( UARTCharsAvail(UART1_BASE))
+	{
+		//
+		// Read the next character from the UART and write it back to the UART.
+		//
+		//	 UARTCharPutNonBlocking(UART1_BASE, UARTCharGetNonBlocking(UART1_BASE));
+		BB_Recv[BB_Recv_Index] = UARTCharGetNonBlocking(UART1_BASE);
+		BB_Recv_Index++;
+	}
+}
+
+
+void UART2_IntHandler(void)
+{
+	/* Get interrupts */
+	uint32_t Flags =  UARTIntStatus(UART2_BASE, true);
+
+	/* Clear the asserted interrupts */
+	UARTIntClear(UART2_BASE, Flags);
+
+	//NO FUCNTIONALITY IMPLEMENTED FOR THIS UART HANDLER
+}
+
+void UART3_IntHandler(void)
+{
+	/* Get interrupts */
+	uint32_t Flags =  UARTIntStatus(UART3_BASE, true);
+
+	/* Clear the asserted interrupts */
+	UARTIntClear(UART3_BASE, Flags);
+
+	//NO FUCNTIONALITY IMPLEMENTED FOR THIS UART HANDLER
+}
+
+void UART4_IntHandler(void)
+{
+	/* Get interrupts */
+	uint32_t Flags =  UARTIntStatus(UART4_BASE, true);
+
+	/* Clear the asserted interrupts */
+	UARTIntClear(UART4_BASE, Flags);
+
+	//NO FUCNTIONALITY IMPLEMENTED FOR THIS UART HANDLER
+}
+
+void UART5_IntHandler(void)
+{
+	/* Get interrupts */
+	uint32_t Flags =  UARTIntStatus(UART5_BASE, true);
+
+	/* Clear the asserted interrupts */
+	UARTIntClear(UART5_BASE, Flags);
+
+	//NO FUCNTIONALITY IMPLEMENTED FOR THIS UART HANDLER
+}
+
+void UART6_IntHandler(void)
+{
+	/* Get interrupts */
+	uint32_t Flags =  UARTIntStatus(UART6_BASE, true);
+
+	/* Clear the asserted interrupts */
+	UARTIntClear(UART6_BASE, Flags);
+
+	//NO FUCNTIONALITY IMPLEMENTED FOR THIS UART HANDLER
+}
+
+void UART7_IntHandler(void)
+{
+	/* Get interrupts */
+	uint32_t Flags =  UARTIntStatus(UART7_BASE, true);
+
+	/* Clear the asserted interrupts */
+	UARTIntClear(UART7_BASE, Flags);
+
+	//NO FUCNTIONALITY IMPLEMENTED FOR THIS UART HANDLER
+}

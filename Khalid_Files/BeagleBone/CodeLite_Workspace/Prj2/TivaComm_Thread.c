@@ -22,11 +22,12 @@
 
 void * TivaCommThread(void * args)
 {
-	//INIT UART
+	/* Init UART1 */
 	UART_Struct *BB_UART1 = malloc(sizeof(UART_Struct));
 	BB_UART1->UART_ID = UART1;
 	BB_UART1->BaudRate = B9600;
 	
+	/* Open the UART port */
 	if( !Open_UARTx(BB_UART1) )
 	{
 		printf("UART 1 opened!\n");

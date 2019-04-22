@@ -22,6 +22,7 @@
 //My includes
 #include "Global_Defines.h"
 #include "Master_Functions.h"
+#include "My_UART.h"
 
 /* Global Variables */
 extern QueueHandle_t xQueue_Msgs;
@@ -49,6 +50,9 @@ uint8_t BB_Comm_TaskInit()
 
 void BB_Comm_Task(void *pvParameters)
 {
+	/* Init UART1 - Used to talk to the BeagleBone via Bluetooth */
+	Init_UARTx(UART1, SYSTEM_CLOCK, 9600, true);
+
 	/* Create a queue capable of containing 50 messages */
 	xQueue_Msgs = xQueueCreate( 50, sizeof( MsgStruct ) );
 
@@ -61,6 +65,9 @@ void BB_Comm_Task(void *pvParameters)
 	{
 		Log_UART0(GetCurrentTime(), BB_Comm, "INFO", "Created xQueue_Msgs successfully!");
 	}
+
+
+
 
 	/* Variable that will store and decode received messages */
 	struct MsgStruct RXMessage;

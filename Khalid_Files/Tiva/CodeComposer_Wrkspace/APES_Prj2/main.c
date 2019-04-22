@@ -18,6 +18,7 @@
 #include "driverlib/sysctl.h"
 #include "driverlib/debug.h"
 #include "drivers/pinout.h"
+#include "driverlib/interrupt.h"
 
 //FreeRTOS includes
 #include "FreeRTOSConfig.h"
@@ -35,8 +36,17 @@
 /* Global Variables */
 QueueHandle_t xQueue_Msgs = NULL;				//This is the queue the BB_Comm Task will read from and other tasks will send to
 
+//TEST
+char BB_Recv[100];
+uint16_t BB_Recv_Index = 0;
+
+
+
 
 /* LAST WORKING ON:
+ * BEAGLEBONE SIDE OF THE CODE.
+ * NEED TO COME UP WITH PROPER WAY TO TALK TO BEAGLEBONE.
+ * WAS TESTING RECIEVING ON THIS SIDE BUT DID NOT GET TO IT LOOK AT GLOBAL VARIABLE
  *
  * TO ASK PROF:
  * - STACK SIZE HEAP SIZE ON FREERTOS? I AM NOT SURE
@@ -94,9 +104,13 @@ QueueHandle_t xQueue_Msgs = NULL;				//This is the queue the BB_Comm Task will r
  * 17- [COMPLETED] CHANGE FREERTOS HEAP TYPE TO HEAP 3 OR 4
  * 				L-> USED heap_4.c
  *
- * 18- [] CONNECT TivaBLE MODULE
+ * 18- [COMPLETED] CONNECT TivaBLE MODULE
+ * 				L-> TivaBLE MAC ADDRESS: 9C1D_5888_6519
  *
- * 19- [] HAVE RX INTERRUPPTS FOR BB_Comm TASK
+ * 19- [COMPLETED] HAVE RX INTERRUPPTS FOR BB_Comm TASK
+ * 				L-> ALL UART PORTS CAN NOW HAVE INTERUPPTS ENABLED SIMPLY BY CALLING Init_UARTx() AND HAVING THE
+ * 				    LAST PARAMETER BE TRUE. HOWEVER, YOU NEED TO DEFINE WHAT THE RX INTERUPPT WILL DO IN ITS
+ * 				    SPECIFIC INTERUPPT HANDLER.
  *
  * 20- []
  *
@@ -123,8 +137,15 @@ int main()
 	PinoutSet(false, false);
 
 	/* Init UART0 - Used for local debugging and errors */
-	Init_UARTx(UART0, SYSTEM_CLOCK, 9600);
+	Init_UARTx(UART0, SYSTEM_CLOCK, 9600, false);
 	Log_UART0(GetCurrentTime(), Main, "INFO", "UART0 was init successfully!");
+
+	/* Displays messages to UART0 */
+	DisplayBootUpMsg(UART0);
+
+	/* Enable global interrupts */
+	IntMasterEnable();
+
 
 
 	/* Init BB_Comm Task */
@@ -136,6 +157,8 @@ int main()
 	{
 		Log_UART0(GetCurrentTime(), Main, "INFO", "BB_Comm Task init successfully!");
 	}
+
+
 
 	vTaskStartScheduler();
 	return 0;
