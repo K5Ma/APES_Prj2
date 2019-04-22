@@ -28,6 +28,22 @@
 extern QueueHandle_t xQueue_Msgs;
 
 
+void DisplayBootUpMsg(uint8_t UARTPort)
+{
+	UART_Putchar_n(UARTPort, "\n\r> ***************************************************\n\r");
+	UART_Putchar_n(UARTPort, "> *             APES Project 2 (Tiva Side):         *\n\r");
+	UART_Putchar_n(UARTPort, "> *               S.E.C.U.R.E.R.O.O.M               *\n\r");
+	UART_Putchar_n(UARTPort, "> * 'S'uper 'E'ncrypted 'C'ourse project which is a *\n\r");
+	UART_Putchar_n(UARTPort, "> * 'U'seful 'R'oom 'E'mbedded 'S'ystem that        *\n\r");
+	UART_Putchar_n(UARTPort, "> * communicates 'R'emotely 'O'ver the air and it's *\n\r");
+	UART_Putchar_n(UARTPort, "> *              'O'bviously 'M'arvelous            *\n\r");
+	UART_Putchar_n(UARTPort, "> *                                                 *\n\r");
+	UART_Putchar_n(UARTPort, "> *        By: Khalid AlAwadhi | Poorn Mehta        *\n\r");
+	UART_Putchar_n(UARTPort, "> *                                            v1.1 *\n\r");
+	UART_Putchar_n(UARTPort, "> ***************************************************\n\n\r");
+}
+
+
 void Log_UART0(float CurrTime, uint8_t Src, char* LogLvl, char* Msg)
 {
 	/* Get name of source */

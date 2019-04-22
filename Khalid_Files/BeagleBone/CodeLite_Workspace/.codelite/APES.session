@@ -1,33 +1,68 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Session Name="/home/debian/Desktop/CodeLite_Workspace/APES.workspace">
-  <int Value="3" Name="m_selectedTab"/>
+  <int Value="0" Name="m_selectedTab"/>
   <wxString Value="/home/debian/Desktop/CodeLite_Workspace/APES.workspace" Name="m_workspaceName"/>
   <TabInfoArray Name="TabInfoArray">
     <TabInfo>
-      <wxString Value="/home/debian/Desktop/CodeLite_Workspace/Prj2/TivaComm_Thread.c" Name="FileName"/>
-      <int Value="1" Name="FirstVisibleLine"/>
-      <int Value="32" Name="CurrentLine"/>
+      <wxString Value="/home/debian/Desktop/CodeLite_Workspace/Prj2/main.c" Name="FileName"/>
+      <int Value="48" Name="FirstVisibleLine"/>
+      <int Value="19" Name="CurrentLine"/>
       <wxArrayString Name="Bookmarks"/>
       <IntVector Name="CollapsedFolds"/>
     </TabInfo>
     <TabInfo>
-      <wxString Value="/home/debian/Desktop/CodeLite_Workspace/Prj2/My_UART_BB.h" Name="FileName"/>
-      <int Value="12" Name="FirstVisibleLine"/>
+      <wxString Value="/home/debian/Desktop/CodeLite_Workspace/Prj2/TivaComm_Thread.h" Name="FileName"/>
+      <int Value="0" Name="FirstVisibleLine"/>
+      <int Value="7" Name="CurrentLine"/>
+      <wxArrayString Name="Bookmarks"/>
+      <IntVector Name="CollapsedFolds"/>
+    </TabInfo>
+    <TabInfo>
+      <wxString Value="/home/debian/Desktop/CodeLite_Workspace/Prj2/TivaComm_Thread.c" Name="FileName"/>
+      <int Value="9" Name="FirstVisibleLine"/>
       <int Value="22" Name="CurrentLine"/>
       <wxArrayString Name="Bookmarks"/>
       <IntVector Name="CollapsedFolds"/>
     </TabInfo>
     <TabInfo>
-      <wxString Value="/home/debian/Desktop/CodeLite_Workspace/Prj2/My_UART_BB.c" Name="FileName"/>
-      <int Value="104" Name="FirstVisibleLine"/>
-      <int Value="131" Name="CurrentLine"/>
+      <wxString Value="/home/debian/Desktop/CodeLite_Workspace/Prj2/Master_Functions.h" Name="FileName"/>
+      <int Value="61" Name="FirstVisibleLine"/>
+      <int Value="87" Name="CurrentLine"/>
       <wxArrayString Name="Bookmarks"/>
       <IntVector Name="CollapsedFolds"/>
     </TabInfo>
     <TabInfo>
-      <wxString Value="/home/debian/Desktop/CodeLite_Workspace/Prj2/main.c" Name="FileName"/>
-      <int Value="52" Name="FirstVisibleLine"/>
-      <int Value="25" Name="CurrentLine"/>
+      <wxString Value="/home/debian/Desktop/CodeLite_Workspace/Prj2/Master_Functions.c" Name="FileName"/>
+      <int Value="155" Name="FirstVisibleLine"/>
+      <int Value="190" Name="CurrentLine"/>
+      <wxArrayString Name="Bookmarks"/>
+      <IntVector Name="CollapsedFolds"/>
+    </TabInfo>
+    <TabInfo>
+      <wxString Value="/home/debian/Desktop/CodeLite_Workspace/Prj2/Logger_Thread.h" Name="FileName"/>
+      <int Value="24" Name="FirstVisibleLine"/>
+      <int Value="1" Name="CurrentLine"/>
+      <wxArrayString Name="Bookmarks"/>
+      <IntVector Name="CollapsedFolds"/>
+    </TabInfo>
+    <TabInfo>
+      <wxString Value="/home/debian/Desktop/CodeLite_Workspace/Prj2/Logger_Thread.c" Name="FileName"/>
+      <int Value="182" Name="FirstVisibleLine"/>
+      <int Value="191" Name="CurrentLine"/>
+      <wxArrayString Name="Bookmarks"/>
+      <IntVector Name="CollapsedFolds"/>
+    </TabInfo>
+    <TabInfo>
+      <wxString Value="/home/debian/Desktop/CodeLite_Workspace/Prj2/Global_Defines.h" Name="FileName"/>
+      <int Value="28" Name="FirstVisibleLine"/>
+      <int Value="45" Name="CurrentLine"/>
+      <wxArrayString Name="Bookmarks"/>
+      <IntVector Name="CollapsedFolds"/>
+    </TabInfo>
+    <TabInfo>
+      <wxString Value="/home/debian/Desktop/CodeLite_Workspace/Prj2/My_UART_BB.c" Name="FileName"/>
+      <int Value="19" Name="FirstVisibleLine"/>
+      <int Value="17" Name="CurrentLine"/>
       <wxArrayString Name="Bookmarks"/>
       <IntVector Name="CollapsedFolds"/>
     </TabInfo>

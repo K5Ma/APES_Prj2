@@ -13,7 +13,7 @@ CurrentFileName        :=
 CurrentFilePath        :=
 CurrentFileFullPath    :=
 User                   :=K5M
-Date                   :=04/20/19
+Date                   :=04/22/19
 CodeLitePath           :="/home/debian/.codelite"
 LinkerName             :=/usr/bin/g++ 
 SharedObjectLinkerName :=/usr/bin/g++ -shared -fPIC
@@ -51,7 +51,7 @@ AR       := /usr/bin/ar rcu
 CXX      := /usr/bin/g++ 
 CC       := /usr/bin/gcc 
 CXXFLAGS :=  -g -O0 -Wall $(Preprocessors)
-CFLAGS   := -std=c11 -g -O0 -Wall $(Preprocessors)
+CFLAGS   := -std=c11 -g -O0 -Wall -D_GNU_SOURCE $(Preprocessors)
 ASFLAGS  := 
 AS       := /usr/bin/as 
 
@@ -60,7 +60,7 @@ AS       := /usr/bin/as
 ## User defined environment variables
 ##
 CodeLiteDir:=/usr/share/codelite
-Objects0=$(IntermediateDirectory)/main.c$(ObjectSuffix) $(IntermediateDirectory)/Master_Functions.c$(ObjectSuffix) $(IntermediateDirectory)/TivaComm_Thread.c$(ObjectSuffix) $(IntermediateDirectory)/My_UART_BB.c$(ObjectSuffix) 
+Objects0=$(IntermediateDirectory)/main.c$(ObjectSuffix) $(IntermediateDirectory)/Master_Functions.c$(ObjectSuffix) $(IntermediateDirectory)/TivaComm_Thread.c$(ObjectSuffix) $(IntermediateDirectory)/My_UART_BB.c$(ObjectSuffix) $(IntermediateDirectory)/Logger_Thread.c$(ObjectSuffix) 
 
 
 
@@ -118,6 +118,14 @@ $(IntermediateDirectory)/My_UART_BB.c$(DependSuffix): My_UART_BB.c
 
 $(IntermediateDirectory)/My_UART_BB.c$(PreprocessSuffix): My_UART_BB.c
 	@$(CC) $(CFLAGS) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/My_UART_BB.c$(PreprocessSuffix) "My_UART_BB.c"
+
+$(IntermediateDirectory)/Logger_Thread.c$(ObjectSuffix): Logger_Thread.c $(IntermediateDirectory)/Logger_Thread.c$(DependSuffix)
+	$(CC) $(SourceSwitch) "/home/debian/Desktop/CodeLite_Workspace/Prj2/Logger_Thread.c" $(CFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/Logger_Thread.c$(ObjectSuffix) $(IncludePath)
+$(IntermediateDirectory)/Logger_Thread.c$(DependSuffix): Logger_Thread.c
+	@$(CC) $(CFLAGS) $(IncludePath) -MG -MP -MT$(IntermediateDirectory)/Logger_Thread.c$(ObjectSuffix) -MF$(IntermediateDirectory)/Logger_Thread.c$(DependSuffix) -MM "Logger_Thread.c"
+
+$(IntermediateDirectory)/Logger_Thread.c$(PreprocessSuffix): Logger_Thread.c
+	@$(CC) $(CFLAGS) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/Logger_Thread.c$(PreprocessSuffix) "Logger_Thread.c"
 
 
 -include $(IntermediateDirectory)/*$(DependSuffix)

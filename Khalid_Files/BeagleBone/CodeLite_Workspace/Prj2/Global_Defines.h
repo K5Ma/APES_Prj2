@@ -42,21 +42,30 @@
 typedef enum
 {
 	Main = 1,
-	TivaComm = 2,
-	Logger = 3
+	Logger = 2,
+	TivaComm = 3
 } Sources;
 
 
+/*****************************************
+ * This define should be used when sizing*
+ * strings that will be used to store    *
+ * messages in the system. Helps keeps   *
+ * things consistent.                    *
+ *****************************************/
+#define MSGSTR_SIZE					200
+ 
+
 /***************************************
- *        Message Structure            *
+ *     POSIX Message Structure         *
  ***************************************/
-typedef struct MsgStruct 
+typedef struct POSIX_MsgStruct 
 {
 	uint8_t Source;
 	uint8_t Dest;
-	char LogLevel[150];				//Expected values: INFO | WARNING | ERROR | CRITICAL
-	char Msg[150];
-} MsgStruct;
+	char LogLevel[MSGSTR_SIZE];		//Expected values: INFO | WARNING | ERROR | CRITICAL | FATAL
+	char Msg[MSGSTR_SIZE];
+} POSIX_MsgStruct;
 
 
 /***************************************
@@ -72,20 +81,28 @@ typedef struct Pthread_ArgsStruct
 /***************************************
  *          POSIX Queues               *
  ***************************************/
-#define MAIN_QUEUE					"/MAIN_POSIX_Q"
-#define LOGGING_QUEUE				"/LOGGING_POSIX_Q"
+#define LOGGER_QUEUE				"/LOGGER_POSIX_Q"
 
 
 
 /***************************************
- *  Log_error() Function Parameters:   *
+ *   Log_Msg() Function Parameters:    * 
  *   (found in Master_Functions.h)     *
  ***************************************/
-#define LOGGING_AND_LOCAL			0x01
-#define LOGGING_ONLY				0x02
+#define LOGGER_AND_LOCAL			0x01
+#define LOGGER_ONLY					0x02
 #define LOCAL_ONLY					0x03 
- 
- 
+
+
+/*****************************************
+ * The define below should be used when  *
+ * initializing a string that will store *
+ * the current system real time using    *
+ * GetRealTime()                         *
+ *****************************************/
+#define TIMESTR_SIZE				26
+
+
 
 
 

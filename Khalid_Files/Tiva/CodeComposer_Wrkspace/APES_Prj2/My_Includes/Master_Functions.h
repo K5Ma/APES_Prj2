@@ -13,6 +13,18 @@
 
 
 /**************************************************************************************************************
+ * USAGE: This function displays our boot-up msg on the desired UART port.
+ *
+ * PARAMETERS:
+ *            - uint8_t UARTPort => The UART port to output the message to
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void DisplayBootUpMsg(uint8_t UARTPort);
+
+
+
+/**************************************************************************************************************
  * USAGE: This function will output a message to the UART0 (make sure to Init the UART first!). This function
  *		  should mainly be used in tasks to log errors to the local UART0 and small stuff that do not need to be
  *		  sent to the BeagleBone.

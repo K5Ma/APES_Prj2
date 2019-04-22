@@ -1,10 +1,18 @@
-[1555797447.292757] TivaComm Thread: Logfile successfully created! TID: 3441
+> [Mon Apr 22 02:43:49] 'Logger Thread' (INFO) => Logfile successfully created! TID: 26271
 
-***************************************
-*     APES Project 2 (BeagleBone):    *
-*       *insert cool name here*       *
-*                                     *
-*  By: Khalid AlAwadhi | Poorn Mehta  *
-*                         v1.0        *
-***************************************
+
+> ***************************************************
+> *         APES Project 2 (BeagleBone Side):       *
+> *               S.E.C.U.R.E.R.O.O.M               *
+> * 'S'uper 'E'ncrypted 'C'ourse project which is a *
+> * 'U'seful 'R'oom 'E'mbedded 'S'ystem that        *
+> * communicates 'R'emotely 'O'ver the air and it's *
+> *              'O'bviously 'M'arvelous            *
+> *                                                 *
+> *        By: Khalid AlAwadhi | Poorn Mehta        *
+> *                                            v1.1 *
+> ***************************************************
+
+> [Mon Apr 22 02:43:51] Log Event(INFO): SUCCESS: Created TivaComm Thread!
+> L->Source: Main Thread
 
