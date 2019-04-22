@@ -361,15 +361,16 @@ void EPaperTask(void *pvParameters)
 #endif
     EP_Send_Command(EP_CMD_Storage_Set, EP_Storage_Set_Type);
 
+#if     EP_INDIVIDUAL_TESTING
+
     /*
      * This portion just tests the EPaper individually
      * It doesn't rely on anything that is not covered
      * or provided by its own header and source files
      *
-     * This mode is only for raw testing, and does not
+     * This mode is only for raw testing, and may not
      * include any of the error checking feature(s)
      */
-#if     EP_INDIVIDUAL_TESTING
 
     #if     EP_DEBUG_PRINTF
         cust_print("\nStorage Get");

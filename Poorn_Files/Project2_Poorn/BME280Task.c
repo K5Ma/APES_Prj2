@@ -609,16 +609,17 @@ void BME280Task(void *pvParameters)
 
     BME280_RunStatus = true;
 
+#if     BME280_INDIVIDUAL_TESTING
+
     /*
      * This portion just tests the BME280 Sensor individually
      * It doesn't rely on anything that is not covered
      * or provided by its own header and source files
      *
-     * This mode is only for raw testing, and does not
+     * This mode is only for raw testing, and may not
      * include any of the error checking feature(s)
      */
 
-#if     BME280_INDIVIDUAL_TESTING
     while(1)
     {
         BME280_ReadAllDataReg();

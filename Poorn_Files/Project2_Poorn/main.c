@@ -154,26 +154,26 @@ int main(void)
 //    }
 //    else        cust_print("\nLoadCell Task Created");
 
-    if(xTaskCreate(BME280Task, (const portCHAR *)"BME280",
-               500, 0, 1, 0) != pdTRUE)
-    {
-        cust_print("\nBME280 Task Creation Failed");
-    }
-    else        cust_print("\nBME280 Task Created");
+//    if(xTaskCreate(BME280Task, (const portCHAR *)"BME280",
+//               500, 0, 1, 0) != pdTRUE)
+//    {
+//        cust_print("\nBME280 Task Creation Failed");
+//    }
+//    else        cust_print("\nBME280 Task Created");
 
-//    if(xTaskCreate(nfc_all, (const portCHAR *)"NFC",
+//    if(xTaskCreate(NFCTask, (const portCHAR *)"NFC",
 //               500, 0, 1, 0) != pdTRUE)
 //    {
 //        cust_print("\nNFC Task Creation Failed");
 //    }
 //    else        cust_print("\nNFC Task Created");
 
-//    if(xTaskCreate(ServoTask, (const portCHAR *)"Servo",
-//               500, 0, 1, 0) != pdTRUE)
-//    {
-//        cust_print("\nServo Task Creation Failed");
-//    }
-//    else        cust_print("\nServo Task Created");
+    if(xTaskCreate(ServoTask, (const portCHAR *)"Servo",
+               500, 0, 1, 0) != pdTRUE)
+    {
+        cust_print("\nServo Task Creation Failed");
+    }
+    else        cust_print("\nServo Task Created");
 
 //    if(xTaskCreate(OutputIndicatorsTask, (const portCHAR *)"OutputIndicators",
 //               500, 0, 1, 0) != pdTRUE)

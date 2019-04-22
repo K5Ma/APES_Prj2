@@ -243,15 +243,16 @@ void LoadCellTask(void *pvParameters)
                 cust_print("\nLoadCell Init Completed");
     #endif
 
-    /*
-     * This portion just tests the Load Cell individually
-     * It doesn't rely on anything that is not covered
-     * or provided by its own header and source files
-     *
-     * This mode is only for raw testing, and does not
-     * include any of the error checking feature(s)
-     */
 #if     LC_INDIVIDUAL_TESTING
+
+        /*
+         * This portion just tests the Load Cell individually
+         * It doesn't rely on anything that is not covered
+         * or provided by its own header and source files
+         *
+         * This mode is only for raw testing, and may not
+         * include any of the error checking feature(s)
+         */
 
     static uint8_t valid;
 

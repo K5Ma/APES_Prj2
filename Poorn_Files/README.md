@@ -11,7 +11,7 @@ Poorn's Readme File
 
 >*What's New?*
 
->>Raw Code - BME280 (on SPI (SSI0) - yet to add all config features), NFC Reader (UART5), Load Cell (with HX711, digital 2 wire (non standard) interface)
+>>Raw Code - BME280 (on SPI (SSI0) - yet to add all config features), NFC Module (UART5), Load Cell (with HX711, digital 2 wire (non standard) interface)
 
 
 >*What's Changed/Updated?*
@@ -43,7 +43,7 @@ Poorn's Readme File
 
 >*What's the Same?*
 
->>Raw Code - BME280 (on SPI (SSI0) - yet to add all config features), NFC Reader (UART5)
+>>Raw Code - BME280 (on SPI (SSI0) - yet to add all config features), NFC Module (UART5)
 
 
 >*What's Removed?*
@@ -65,7 +65,29 @@ Poorn's Readme File
 
 >*What's the Same?*
 
->>Raw Code - Servo (PWM), SpeakJet (UART6), Buzzer (PWM), NFC Reader (UART5), Commented out ADC
+>>Raw Code - Servo (PWM), SpeakJet (UART6), Buzzer (PWM), NFC Module (UART5), Commented out ADC
+
+
+>*What's Removed?*
+
+>>Null
+
+
+**********v1.4********** (4/22/2019)
+
+>*What's New?*
+
+>>Standalone Driver - NFC v1.0 (clean interface, comments, local error handling - Updated from Raw Code)
+
+
+>*What's Changed/Updated?*
+
+>>Standalone Driver - EPaper v1.2 (minor improvements), LoadCell v1.2(minor fixes, and improvements), BME280 v1.1 (minor updates)
+
+
+>*What's the Same?*
+
+>>Raw Code - Servo (PWM), SpeakJet (UART6), Buzzer (PWM), Commented out ADC
 
 
 >*What's Removed?*
