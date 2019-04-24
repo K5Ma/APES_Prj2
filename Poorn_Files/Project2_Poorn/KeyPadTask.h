@@ -1,33 +1,34 @@
 /*
- * ServoTask.h
+ * KeyPadTask.h
  *
- *  Created on: Apr 19, 2019
- *  Last Update: Apr 22, 2019
+ *  Created on: Apr 22, 2019
+ *  Last Update: Apr 23, 2019
  *      Author: Poorn Mehta
  *
- *  Driver for Driving Servo Motor which is connected to
- *  TM4C1294XL (TIVA Development Board) using PWM output
+ *  Driver for Interfacing with 4x4 Keypad which is connected to
+ *  TM4C1294XL (TIVA Development Board) using GPIO pins
  *
  *  This driver code is developed based on provided documentation from the manufacturer
  *
  */
 
-#ifndef SERVOTASK_H_
-#define SERVOTASK_H_
+#ifndef KEYPADTASK_H_
+#define KEYPADTASK_H_
 
-#define Servo_Polling_Timems       500
+#define KeyPad_Polling_Timems       100
+#define KeyPad_Timeoutms            (400 * KeyPad_Polling_Timems)
 
-#define Servo_Host_Unknown           false
+#define KeyPad_Host_Unknown           false
 
-#if     Servo_Host_Unknown
-    #define Servo_Print   UARTprintf
+#if     KeyPad_Host_Unknown
+    #define KeyPad_Print   UARTprintf
 #else
-    #define Servo_Print   cust_print
+    #define KeyPad_Print   cust_print
 #endif
 
-#define Servo_INDIVIDUAL_TESTING  true
+#define KeyPad_INDIVIDUAL_TESTING  true
 
-#define Servo_DEBUG_PRINTF        true
+#define KeyPad_DEBUG_PRINTF        true
 
 // Standard Includes
 #include <stdlib.h>
@@ -69,17 +70,15 @@
 // System clock rate, 120 MHz
 #define SYSTEM_CLOCK    120000000U
 
-#define Servo_PWM_Freq      50
-#define Servo_PWM_Cycles    (uint32_t)((SYSTEM_CLOCK / 64) / Servo_PWM_Freq)
+#define KeyPad_Rows     4
+#define KeyPad_Cols     4
 
-#define Servo_Open_Position     (uint32_t)(Servo_PWM_Cycles * 0.2)
-#define Servo_Close_Position    (uint32_t)(Servo_PWM_Cycles * 0.075)
+#define KeyPad_Code_Size    6
 
-#define Servo_Door_Open_Timeoutms           10000
+void KeyPad_Init(void);
+void KeyPad_SelectRow(uint8_t row);
+void KeyPad_BlinkLED(void);
+bool KeyPad_ScanCode(uint8_t row);
+void KeyPadTask(void *pvParameters);
 
-void Servo_PWM_Init(void);
-void Servo_Door_Open(void);
-void Servo_Door_Close(void);
-void ServoTask(void *pvParameters);
-
-#endif /* SERVOTASK_H_ */
+#endif /* KEYPADTASK_H_ */

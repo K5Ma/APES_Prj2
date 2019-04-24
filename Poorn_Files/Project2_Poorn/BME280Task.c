@@ -135,7 +135,7 @@ uint8_t BME280_SPIReadReg(uint8_t spi_addr)
             BME280_Retries = BME280_Max_Retries;
         #endif
         #if     BME280_DEBUG_PRINTF
-            cust_print("\nBME280 is Offline");
+            BME280_Print("\nBME280 is Offline");
         #endif
     }
 
@@ -482,13 +482,13 @@ bool BME280_SensorSetup(void)
     if(BME280_SPIReadReg(BME280_CHIP_ID_REG) == BME280_DevID)
     {
         #if BME280_DEBUG_PRINTF
-            cust_print("\nBME280 Device ID Verified");
+            BME280_Print("\nBME280 Device ID Verified");
         #endif
     }
     else
     {
         #if BME280_DEBUG_PRINTF
-            cust_print("\nBME280 Device ID Verification Failed");
+            BME280_Print("\nBME280 Device ID Verification Failed");
         #endif
         return true;
     }
@@ -499,13 +499,13 @@ bool BME280_SensorSetup(void)
     if(BME280_GetStandBy() == BME280_Standby_20ms)
     {
         #if BME280_DEBUG_PRINTF
-                cust_print("\nBME280 Standby set to 20ms");
+                BME280_Print("\nBME280 Standby set to 20ms");
         #endif
     }
     else
     {
         #if BME280_DEBUG_PRINTF
-                cust_print("\nBME280 Standby Setting Failed");
+                BME280_Print("\nBME280 Standby Setting Failed");
         #endif
         return true;
     }
@@ -514,30 +514,30 @@ bool BME280_SensorSetup(void)
     if(BME280_GetMode() == BME280_MODE_NORMAL)
     {
         #if BME280_DEBUG_PRINTF
-                cust_print("\nBME280 Mode Set to Normal");
+                BME280_Print("\nBME280 Mode Set to Normal");
         #endif
     }
     else
     {
         #if BME280_DEBUG_PRINTF
-                cust_print("\nBME280 Mode Setting Failed");
+                BME280_Print("\nBME280 Mode Setting Failed");
         #endif
         return true;
     }
 
     BME280_SetHumOVS(BME280_Hum_OVS1);
     #if BME280_DEBUG_PRINTF
-            cust_print("\nBME280 Humidity Oversampling Set to 1x");
+            BME280_Print("\nBME280 Humidity Oversampling Set to 1x");
     #endif
 
     BME280_SetTempOVS(BME280_Temp_OVS1);
     #if BME280_DEBUG_PRINTF
-            cust_print("\nBME280 Temperature Oversampling Set to 1x");
+            BME280_Print("\nBME280 Temperature Oversampling Set to 1x");
     #endif
 
     BME280_SetPressureOVS(BME280_Pressure_OVS1);
     #if BME280_DEBUG_PRINTF
-            cust_print("\nBME280 Pressure Oversampling Set to 1x");
+            BME280_Print("\nBME280 Pressure Oversampling Set to 1x");
     #endif
 
     return false;
@@ -559,14 +559,14 @@ void BME280_TestSensor(void)
     if(BME280_SPIReadReg(BME280_CHIP_ID_REG) != BME280_DevID)
     {
         #if BME280_DEBUG_PRINTF
-            cust_print("\nBME280 Device ID Verification Failed");
+            BME280_Print("\nBME280 Device ID Verification Failed");
         #endif
         BME280_Error = true;
         #if     (BME280_Retry_Mode == BME280_Limited)
             BME280_Retries = BME280_Max_Retries;
         #endif
         #if     BME280_DEBUG_PRINTF
-            cust_print("\nBME280 is Offline");
+            BME280_Print("\nBME280 is Offline");
         #endif
     }
 }
@@ -594,13 +594,13 @@ void BME280Task(void *pvParameters)
             BME280_Retries = BME280_Max_Retries;
         #endif
         #if     BME280_DEBUG_PRINTF
-            cust_print("\nBME280 Setup Failed");
+            BME280_Print("\nBME280 Setup Failed");
         #endif
     }
     else
     {
         #if     BME280_DEBUG_PRINTF
-            cust_print("\nBME280 Setup Succeeded");
+            BME280_Print("\nBME280 Setup Succeeded");
         #endif
     }
 
@@ -634,7 +634,7 @@ void BME280Task(void *pvParameters)
 
         snprintf(tp, sizeof(tp), "\nTemp. - %.2fC(%.2fF) Atm. Pres. - %.2fPa Alt. - %.2fFt R.H. - %.2f%", temperature,
                  ((temperature * 1.8) + 32), pressure, height, humidity);
-        cust_print(tp);
+        BME280_Print(tp);
 
         vTaskDelay(BME280_Polling_Timems);
     }
@@ -679,9 +679,9 @@ void BME280Task(void *pvParameters)
         {
             BME280_TestSensor();
             #if     BME280_DEBUG_PRINTF
-                    cust_print("\nChecking BME280 Status...");
-                    if(LC_Error == false)   cust_print("\nBME280 is Online");
-                    else    cust_print("\nBME280 is Offline");
+                    BME280_Print("\nChecking BME280 Status...");
+                    if(LC_Error == false)   BME280_Print("\nBME280 is Online");
+                    else    BME280_Print("\nBME280 is Offline");
             #endif
             idletimecount = 0;
         }
@@ -712,7 +712,7 @@ void BME280Task(void *pvParameters)
                 #if     BME280_DEBUG_PRINTF
                     snprintf(tp, sizeof(tp), "\nTemp. - %.2fC(%.2fF) R.H. - %.2f%", temperature,
                              ((temperature * 1.8) + 32), humidity);
-                    cust_print(tp);
+                    BME280_Print(tp);
                 #endif
                 BME280_milliTemperatureCelcius = (uint16_t)(temperature * 1000);
                 BME280_milliHumidityPercent = (uint16_t)(humidity * 1000);
@@ -720,7 +720,7 @@ void BME280Task(void *pvParameters)
             else
             {
                 #if     BME280_DEBUG_PRINTF
-                    cust_print("\nBME280 is Offline");
+                    BME280_Print("\nBME280 is Offline");
                 #endif
                 BME280_milliTemperatureCelcius = 0;
                 BME280_milliHumidityPercent = 0;

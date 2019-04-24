@@ -56,6 +56,10 @@
 #include "ServoTask.h"
 #include "SpeakJetTask.h"
 #include "OutputIndicatorsTask.h"
+#include "KeyPadTask.h"
+#include "LuxTask.h"
+
+#include <math.h>
 
 QueueHandle_t log_queue;
 
@@ -104,6 +108,9 @@ int main(void)
     UARTStdioConfig(0, 115200, SYSTEM_CLOCK);
 
     cust_print("\nProgram Start");
+
+
+
 
 //    GPIOPinTypeGPIOOutput(GPIO_PORTM_BASE, GPIO_PIN_6);
 //    GPIOPinTypeGPIOOutput(GPIO_PORTQ_BASE, GPIO_PIN_1);
@@ -168,12 +175,12 @@ int main(void)
 //    }
 //    else        cust_print("\nNFC Task Created");
 
-    if(xTaskCreate(ServoTask, (const portCHAR *)"Servo",
-               500, 0, 1, 0) != pdTRUE)
-    {
-        cust_print("\nServo Task Creation Failed");
-    }
-    else        cust_print("\nServo Task Created");
+//    if(xTaskCreate(ServoTask, (const portCHAR *)"Servo",
+//               500, 0, 1, 0) != pdTRUE)
+//    {
+//        cust_print("\nServo Task Creation Failed");
+//    }
+//    else        cust_print("\nServo Task Created");
 
 //    if(xTaskCreate(OutputIndicatorsTask, (const portCHAR *)"OutputIndicators",
 //               500, 0, 1, 0) != pdTRUE)
@@ -188,6 +195,20 @@ int main(void)
 //        cust_print("\nSpeakJet Task Creation Failed");
 //    }
 //    else        cust_print("\nSpeakJet Task Created");
+
+//    if(xTaskCreate(KeyPadTask, (const portCHAR *)"KeyPad",
+//               500, 0, 1, 0) != pdTRUE)
+//    {
+//        cust_print("\nKeyPadTask Task Creation Failed");
+//    }
+//    else        cust_print("\nKeyPadTask Task Created");
+
+    if(xTaskCreate(LuxTask, (const portCHAR *)"Lux",
+               500, 0, 1, 0) != pdTRUE)
+    {
+        cust_print("\nLux Task Creation Failed");
+    }
+    else        cust_print("\nLux Task Created");
 
 
     vTaskStartScheduler();

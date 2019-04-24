@@ -94,3 +94,25 @@ Poorn's Readme File
 
 >>Null
 
+
+**********v1.5********** (4/23/2019)
+
+>*What's New?*
+
+>>Standalone Driver - Servo 1.0, Keypad v1.0, Lux v1.0 (all having clean interface, comments, local error handling)
+
+
+>*What's Changed/Updated?*
+
+>>Standalone Driver - EPaper v1.3, LoadCell v1.3, BME280 v1.2, NFC v1.1 (minor updates, fixed issue regarding debug printf through UART on unknown host machines)
+
+
+>*What's the Same?*
+
+>>Raw Code - SpeakJet (UART6), Buzzer (PWM), Commented out ADC
+
+
+>*What's Removed?*
+
+>>Null
+

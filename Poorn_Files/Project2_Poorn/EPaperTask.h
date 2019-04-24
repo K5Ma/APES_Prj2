@@ -37,7 +37,9 @@
 #define EP_Host_Unknown           false
 
 #if     EP_Host_Unknown
-#define cust_print      UARTprintf
+    #define EP_Print   UARTprintf
+#else
+    #define EP_Print   cust_print
 #endif
 
 // Standard Includes

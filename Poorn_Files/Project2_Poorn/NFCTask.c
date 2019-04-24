@@ -45,8 +45,7 @@
 #include "queue.h"
 
 // Variables that will be shared between functions
-bool NFC_Error;
-bool NFC_Tag_Mode;
+bool NFC_Error, NFC_Tag_Mode, NFC_Startup_Mode;
 uint8_t NFC_Tag_ID_Array[4], NFC_Retries;
 uint8_t NFC_Rx_Array[25];
 
@@ -101,9 +100,23 @@ uint8_t NFC_UART_Rx(void)
             {
                 timeout = 0;
                 #if     NFC_DEBUG_PRINTF
-                    cust_print("\nChecking NFC Module Status...");
+                    NFC_Print("\nChecking NFC Module Status...");
                 #endif
                 NFC_Tag_Mode = false;
+                return 0;
+            }
+        }
+        else if(NFC_Startup_Mode == true)
+        {
+            vTaskDelay(1);
+            timeout += 1;
+            if(timeout >= NFC_Online_Test_Timems)
+            {
+                timeout = 0;
+                #if     NFC_DEBUG_PRINTF
+                    NFC_Print("\nStartup Failed...");
+                #endif
+                NFC_Startup_Mode = false;
                 return 0;
             }
         }
@@ -122,9 +135,18 @@ uint8_t NFC_UART_Rx(void)
  */
 bool NFC_Get_Verify_Standard_ACK(void)
 {
-    static uint8_t i;
+    static uint8_t i, rxbyte;
 
-    for(i = 0; i < NFC_Standard_ACK_Size; i ++)     NFC_Rx_Array[i] = NFC_UART_Rx();
+    for(i = 0; i < NFC_Standard_ACK_Size; i ++)
+    {
+        rxbyte = NFC_UART_Rx();
+        if(NFC_Startup_Mode == true)    NFC_Rx_Array[i] = rxbyte;
+        else
+        {
+            NFC_Sensor_Test();
+            return true;
+        }
+    }
 
     if((NFC_Rx_Array[0] != NFC_Standard_ACK_Byte1) || (NFC_Rx_Array[1] != NFC_Standard_ACK_Byte2) ||
             (NFC_Rx_Array[2] != NFC_Standard_ACK_Byte3) || (NFC_Rx_Array[3] != NFC_Standard_ACK_Byte4) ||
@@ -144,8 +166,10 @@ bool NFC_Get_Verify_Standard_ACK(void)
 bool NFC_Verify_Firmware_Version(void)
 {
     static uint8_t i;
+    NFC_Startup_Mode = true;
+
     #if     NFC_DEBUG_PRINTF
-        cust_print("\nVerifying NFC Firmware Version");
+        NFC_Print("\nVerifying NFC Firmware Version");
     #endif
     for(i = 0; i < sizeof(NFC_FirmwareVersion); i ++)    UARTCharPut(UART5_BASE, NFC_FirmwareVersion[i]);
 
@@ -182,14 +206,14 @@ void NFC_Sensor_Test(void)
                 NFC_Retries = NFC_Max_Retries;
             #endif
             #if     NFC_DEBUG_PRINTF
-                cust_print("\nNFC Module is Offline");
+                NFC_Print("\nNFC Module is Offline");
             #endif
         }
         else
         {
             NFC_Error = false;
             #if     NFC_DEBUG_PRINTF
-                cust_print("\nNFC Module is Online");
+                NFC_Print("\nNFC Module is Online");
             #endif
         }
 #if     (NFC_Retry_Mode == NFC_Limited)
@@ -217,7 +241,7 @@ bool NFC_Read_Tag_ID(void)
     static uint8_t rxbyte;
 
     #if     NFC_DEBUG_PRINTF
-        cust_print("\nWaiting for Tag");
+        NFC_Print("\nWaiting for Tag");
     #endif
 
     NFC_Tag_Mode = true;
@@ -242,7 +266,7 @@ bool NFC_Read_Tag_ID(void)
         for(i = 0; i < NFC_Tag_ID_Length; i ++)    NFC_Tag_ID_Array[i] = NFC_Rx_Array[(i + NFC_Standard_ACK_Size + NFC_Tag_ID_Start_Byte_Pos)];
         #if     NFC_DEBUG_PRINTF
             snprintf(tp, sizeof(tp), "\nTag ID: %02X:%02X:%02X:%02X", NFC_Tag_ID_Array[0], NFC_Tag_ID_Array[1], NFC_Tag_ID_Array[2], NFC_Tag_ID_Array[3]);
-            cust_print(tp);
+            NFC_Print(tp);
         #endif
         vTaskDelay(NFC_Wait_Timems);
     }
@@ -264,8 +288,10 @@ bool NFC_Module_Init(void)
     static char tp[50];
     static uint8_t i;
 
+    NFC_Startup_Mode = true;
+
     #if     NFC_DEBUG_PRINTF
-         cust_print("\nWaking up the Module");
+         NFC_Print("\nWaking up the Module");
     #endif
 
     for(i = 0; i < sizeof(NFC_WakeUp); i ++)    UARTCharPut(UART5_BASE, NFC_WakeUp[i]);
@@ -273,7 +299,7 @@ bool NFC_Module_Init(void)
     vTaskDelay(100);
 
     #if     NFC_DEBUG_PRINTF
-         cust_print("\nGetting Acknowledgement");
+         NFC_Print("\nGetting Acknowledgement");
     #endif
 
     if(NFC_Get_Verify_Standard_ACK() == true)      return true;
@@ -281,18 +307,25 @@ bool NFC_Module_Init(void)
     for(i = NFC_Standard_ACK_Size; i < NFC_WakeUp_ACK_Size; i ++)    NFC_Rx_Array[i] = NFC_UART_Rx();
 
     #if     NFC_DEBUG_PRINTF
-        cust_print("\nDisplaying ACK: ");
+        NFC_Print("\nDisplaying ACK: ");
 
         for(i = 0; i < NFC_WakeUp_ACK_Size; i ++)
         {
             snprintf(tp, sizeof(tp), "%x ", NFC_Rx_Array[i]);
-            cust_print(tp);
+            NFC_Print(tp);
         }
     #endif
 
     return false;
 }
 
+/*
+ *
+ * Callback Function for NFC Task
+ *
+ * Return: Null
+ *
+ */
 void NFCTask(void *pvParameters)
 {
     NFC_Tag_Mode = false;
@@ -301,7 +334,7 @@ void NFCTask(void *pvParameters)
     NFC_UART_Init();
 
     #if     NFC_DEBUG_PRINTF
-        cust_print("\nNFC UART Init Done");
+        NFC_Print("\nNFC UART Init Done");
     #endif
 
     if(NFC_Module_Init() == true)   NFC_Error = true;
@@ -313,13 +346,13 @@ void NFCTask(void *pvParameters)
             NFC_Retries = NFC_Max_Retries;
         #endif
         #if     NFC_DEBUG_PRINTF
-            cust_print("\nNFC Module Initialization Failed");
+            NFC_Print("\nNFC Module Initialization Failed");
         #endif
     }
     else
     {
         #if     NFC_DEBUG_PRINTF
-            cust_print("\nNFC Module Initialization Succeeded");
+            NFC_Print("\nNFC Module Initialization Succeeded");
         #endif
     }
 
@@ -332,17 +365,17 @@ void NFCTask(void *pvParameters)
             NFC_Retries = NFC_Max_Retries;
         #endif
         #if     NFC_DEBUG_PRINTF
-            cust_print("\nNFC Firmwave Version Verification Failed");
+            NFC_Print("\nNFC Firmwave Version Verification Failed");
         #endif
     }
     else
     {
         #if     NFC_DEBUG_PRINTF
-            cust_print("\nNFC Firmwave Version Verification Succeeded");
+            NFC_Print("\nNFC Firmwave Version Verification Succeeded");
         #endif
     }
 
-    cust_print("\nNormal Operation Start");
+    NFC_Print("\nNormal Operation Start");
 
 #if    NFC_INDIVIDUAL_TESTING
 
@@ -364,13 +397,13 @@ void NFCTask(void *pvParameters)
                 NFC_Retries = NFC_Max_Retries;
             #endif
             #if     NFC_DEBUG_PRINTF
-                cust_print("\nNFC Tag Read Command Failed");
+                NFC_Print("\nNFC Tag Read Command Failed");
             #endif
         }
         else
         {
             #if     NFC_DEBUG_PRINTF
-                cust_print("\nNFC Tag Read Command Succeeded");
+                NFC_Print("\nNFC Tag Read Command Succeeded");
             #endif
         }
 
@@ -378,7 +411,7 @@ void NFCTask(void *pvParameters)
         else
         {
             #if     NFC_DEBUG_PRINTF
-                cust_print("\nNFC Tag Read Command Sent");
+                NFC_Print("\nNFC Tag Read Command Sent");
             #endif
         }
 
@@ -415,13 +448,13 @@ void NFCTask(void *pvParameters)
                 NFC_Retries = NFC_Max_Retries;
             #endif
             #if     NFC_DEBUG_PRINTF
-                cust_print("\nNFC Tag Read Command Failed");
+                NFC_Print("\nNFC Tag Read Command Failed");
             #endif
         }
         else
         {
             #if     NFC_DEBUG_PRINTF
-                cust_print("\nNFC Tag Read Command Succeeded");
+                NFC_Print("\nNFC Tag Read Command Succeeded");
             #endif
         }
 
@@ -429,7 +462,7 @@ void NFCTask(void *pvParameters)
         else
         {
             #if     NFC_DEBUG_PRINTF
-                cust_print("\nNFC Tag Read Command Sent");
+                NFC_Print("\nNFC Tag Read Command Sent");
             #endif
         }
 

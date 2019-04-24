@@ -33,7 +33,9 @@
 #define LC_Host_Unknown           false
 
 #if     LC_Host_Unknown
-#define cust_print      UARTprintf
+    #define LC_Print   UARTprintf
+#else
+    #define LC_Print   cust_print
 #endif
 
 #define LC_INDIVIDUAL_TESTING  true

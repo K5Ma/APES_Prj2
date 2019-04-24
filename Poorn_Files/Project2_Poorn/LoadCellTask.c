@@ -240,7 +240,7 @@ void LoadCellTask(void *pvParameters)
     LC_DriverInit();
 
     #if     LC_DEBUG_PRINTF
-                cust_print("\nLoadCell Init Completed");
+                LC_Print("\nLoadCell Init Completed");
     #endif
 
 #if     LC_INDIVIDUAL_TESTING
@@ -271,17 +271,17 @@ void LoadCellTask(void *pvParameters)
 
             if(valid >= LC_ConsecutiveVerificationNeeded)
             {
-                cust_print("\n>>>>>>>>>>>>DOOR OPEN<<<<<<<<<<<<<<<");
+                LC_Print("\n>>>>>>>>>>>>DOOR OPEN<<<<<<<<<<<<<<<");
                 valid = 0;
             }
 
             snprintf(tp, sizeof(tp), "\nMillivolts: %d", millivolts);
-            cust_print(tp);
+            LC_Print(tp);
         }
         else
         {
             #if     LC_DEBUG_PRINTF
-                        cust_print("\nLoadCell Voltage is outside Valid Range");
+                        LC_Print("\nLoadCell Voltage is outside Valid Range");
             #endif
         }
 
@@ -325,9 +325,9 @@ void LoadCellTask(void *pvParameters)
         {
             LC_TestSensor();
             #if     LC_DEBUG_PRINTF
-                    cust_print("\nChecking LoadCell Status...");
-                    if(LC_Error == false)   cust_print("\nLoadCell is Online");
-                    else    cust_print("\nLoadCell is Offline");
+                    LC_Print("\nChecking LoadCell Status...");
+                    if(LC_Error == false)   LC_Print("\nLoadCell is Online");
+                    else    LC_Print("\nLoadCell is Offline");
             #endif
             idletimecount = 0;
         }
@@ -380,7 +380,7 @@ void LoadCellTask(void *pvParameters)
                     else        LC_SamplesArraymv[storedsamplecount ++] = 0;
                     #if     LC_DEBUG_PRINTF
                             snprintf(tp, sizeof(tp), "\nMillivolts: %d", millivolts);
-                            cust_print(tp);
+                            LC_Print(tp);
                     #endif
                 }
 
@@ -406,7 +406,7 @@ void LoadCellTask(void *pvParameters)
 
 //void adc_all(void *pvParameters)
 //{
-//    cust_print("\nADC Setup Start");
+//    LC_Print("\nADC Setup Start");
 //
 //    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
 //
@@ -430,7 +430,7 @@ void LoadCellTask(void *pvParameters)
 //    static uint8_t samples_count, i;
 //    static char tp[50];
 //
-//    cust_print("\nADC Setup Done");
+//    LC_Print("\nADC Setup Done");
 //
 //    while(1)
 //    {
@@ -441,7 +441,7 @@ void LoadCellTask(void *pvParameters)
 //        samples_count = ADCSequenceDataGet(ADC0_BASE, 0, &adc_data[0]);
 //
 //        snprintf(tp, sizeof(tp), "\nSamples: %d", samples_count);
-//        cust_print(tp);
+//        LC_Print(tp);
 //
 //        adc_avg = 0;
 //
@@ -452,7 +452,7 @@ void LoadCellTask(void *pvParameters)
 //        adc_avg >>= 3;
 //
 //        snprintf(tp, sizeof(tp), "\nAvg ADC: %d", adc_avg);
-//        cust_print(tp);
+//        LC_Print(tp);
 //
 //        vTaskDelay(1000);
 //    }

@@ -180,7 +180,7 @@ void EP_Get_Response(void)
     for(j = 0; j < i; j ++)
     {
         snprintf(tp, sizeof(tp), "%c", rx_arr[j]);
-        cust_print(tp);
+        EP_Print(tp);
     }
 #endif
 }
@@ -228,11 +228,11 @@ void EP_Send_Command(uint8_t EP_Command_ID, uint8_t EP_Command_Type)
     EP_Command_Array[EP_Command_Array_Local_Counter ++] = EP_Frame_End_3;
     EP_Command_Array[EP_Command_Array_Local_Counter ++] = EP_Frame_End_4;
     EP_Command_Array[EP_Command_Array_Local_Counter ++] = EP_Parity_Generator(EP_Full_Command_Length);
-//    cust_print("\n");
+//    EP_Print("\n");
 //    for(EP_Command_Array_Local_Counter = 0; EP_Command_Array_Local_Counter < EP_Full_Command_Length; EP_Command_Array_Local_Counter ++)
 //    {
 //        snprintf(tp, sizeof(tp), "%x ", EP_Command_Array[EP_Command_Array_Local_Counter]);
-//        cust_print(tp);
+//        EP_Print(tp);
 //    }
     for(EP_Command_Array_Local_Counter = 0; EP_Command_Array_Local_Counter < EP_Full_Command_Length; EP_Command_Array_Local_Counter ++)
     {
@@ -241,7 +241,7 @@ void EP_Send_Command(uint8_t EP_Command_ID, uint8_t EP_Command_Type)
     EP_Response_Init = 0x00;
 
 #if     EP_DEBUG_PRINTF
-    cust_print("\nResp: ");
+    EP_Print("\nResp: ");
 #endif
 
     EP_Get_Response();
@@ -352,12 +352,12 @@ void EPaperTask(void *pvParameters)
     vTaskDelay(3000);
 
 #if     EP_DEBUG_PRINTF
-    cust_print("\nHandshake");
+    EP_Print("\nHandshake");
 #endif
     EP_Send_Command(EP_CMD_Handshake, EP_Handshake_Type);
 
 #if     EP_DEBUG_PRINTF
-    cust_print("\nStorage Set");
+    EP_Print("\nStorage Set");
 #endif
     EP_Send_Command(EP_CMD_Storage_Set, EP_Storage_Set_Type);
 
@@ -373,23 +373,23 @@ void EPaperTask(void *pvParameters)
      */
 
     #if     EP_DEBUG_PRINTF
-        cust_print("\nStorage Get");
+        EP_Print("\nStorage Get");
     #endif
         EP_Send_Command(EP_CMD_Storage_Get, EP_Storage_Get_Type);
 
     #if     EP_DEBUG_PRINTF
-        cust_print("\nDisplay Circle");
+        EP_Print("\nDisplay Circle");
     #endif
         EP_Draw_Circle(400, 300, 200);
 
         vTaskDelay(2500);
 
     #if     EP_DEBUG_PRINTF
-        cust_print("\nDisplay Image");
+        EP_Print("\nDisplay Image");
     #endif
         EP_Display_Image("123.BMP", 0, 0);
 
-        cust_print("\nEPaper End");
+        EP_Print("\nEPaper End");
 
 #else
         /*
@@ -430,9 +430,9 @@ void EPaperTask(void *pvParameters)
                 idletimecount = 0;
                 EP_Send_Command(EP_CMD_Handshake, EP_Handshake_Type);
                 #if     EP_DEBUG_PRINTF
-                    cust_print("\nChecking EPaper Status... Command: Handshake");
-                    if(EP_Error == false)   cust_print("\nEPaper is Online");
-                    else    cust_print("\nEPaper if Offline");
+                    EP_Print("\nChecking EPaper Status... Command: Handshake");
+                    if(EP_Error == false)   EP_Print("\nEPaper is Online");
+                    else    EP_Print("\nEPaper if Offline");
                 #endif
             }
 
@@ -446,20 +446,20 @@ void EPaperTask(void *pvParameters)
                     EP_Retries -= 1;
             #endif
                     #if     EP_DEBUG_PRINTF
-                        cust_print("\nRetrying Connection with EPaper... Command: Handshake");
+                        EP_Print("\nRetrying Connection with EPaper... Command: Handshake");
                     #endif
                         EP_UART_Init();
                         EP_Send_Command(EP_CMD_Handshake, EP_Handshake_Type);
                         if(EP_Error == true)
                         {
                             #if     EP_DEBUG_PRINTF
-                                cust_print("\nRetry failed with EPaper");
+                                EP_Print("\nRetry failed with EPaper");
                             #endif
                         }
                         else
                         {
                             #if     EP_DEBUG_PRINTF
-                                cust_print("\nEPaper is Online now");
+                                EP_Print("\nEPaper is Online now");
                             #endif
                         }
             #if     (EP_Retry_Mode == EP_Limited)

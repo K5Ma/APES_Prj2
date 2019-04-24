@@ -34,7 +34,9 @@
 #define BME280_Host_Unknown           false
 
 #if     BME280_Host_Unknown
-#define cust_print      UARTprintf
+    #define BME280_Print   UARTprintf
+#else
+    #define BME280_Print   cust_print
 #endif
 
 #define BME280_INDIVIDUAL_TESTING  true

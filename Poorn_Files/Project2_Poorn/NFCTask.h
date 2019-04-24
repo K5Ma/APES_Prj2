@@ -32,7 +32,7 @@
 #define NFC_Retry_Mode           NFC_Infinite
 
 #if     (NFC_Retry_Mode == NFC_Limited)
-#define NFC_Max_Retries          5
+    #define NFC_Max_Retries          5
 #endif
 
 #define NFC_Polling_Timems       500
@@ -43,7 +43,9 @@
 #define NFC_Host_Unknown           false
 
 #if     NFC_Host_Unknown
-#define cust_print      UARTprintf
+    #define NFC_Print   UARTprintf
+#else
+    #define NFC_Print   cust_print
 #endif
 
 #define NFC_INDIVIDUAL_TESTING  true
@@ -109,7 +111,7 @@
 #define NFC_Firmware_Version_ACK_Size       19
 #define NFC_Tag_ID_Size                     25
 
-
+void NFC_Sensor_Test(void);
 void NFC_UART_Init(void);
 uint8_t NFC_UART_Rx(void);
 bool NFC_Get_Verify_Standard_ACK(void);
