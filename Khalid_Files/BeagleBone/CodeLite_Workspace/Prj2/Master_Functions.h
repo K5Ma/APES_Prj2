@@ -46,18 +46,32 @@ void GetRealTime(char* TimeStr, uint8_t StrLen);
 
 
 /**************************************************************************************************************
- * USAGE: This function will send a message to a chosen pThread based on the parameters. In addition, it has
- *        error handling. 
+ * USAGE: This function takes in a number and updates a given string with the name linked to the enum
+ *        (enums found in Global_Defines.h). Tasks are on Tiva while Threads are on BeagleBone. 
+ * 
+ * PARAMETERS:
+ *            - uint8_t EnumNum => The enum you want to get the name of
+ * 			  - char* Str => String to store the name into (Make sure it at least a size of 20 to work for all
+ *                                                          cases!)
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void EnumtoString(uint8_t EnumNum, char* Str);
+
+
+
+/**************************************************************************************************************
+ * USAGE: This function will send a message to the Logger pThread based on the parameters. In addition, it has
+ *        error handling.
  *
  * PARAMETERS:
  *            - uint8_t Src => Source of the message (Look at Global_Defines.h Source Enums)
- *            - uint8_t Dst => Destination of the message
  *            - char* Log => The log level message
  *            - char* Message => mesaage to send
  *
  * RETURNS: NONE
  **************************************************************************************************************/
-void SendToThreadQ(uint8_t Src, uint8_t Dst, char* Log, char* Message);
+void SendToLoggerThreadQ(uint8_t Src, char* Log, char* Message);
 
 
 

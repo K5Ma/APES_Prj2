@@ -71,59 +71,119 @@ void GetRealTime(char* TimeStr, uint8_t StrLen)
 
 
 
-void SendToThreadQ(uint8_t Src, uint8_t Dst, char* Log, char* Message)
+void EnumtoString(uint8_t EnumNum, char* Str)
 {
-	POSIX_MsgStruct Msg2Send =
+	/* Store name based on enum */
+	switch(EnumNum)
 	{
-		.Source = Src,
-		.Dest = Dst
+		/* Tiva Sources */
+		case T_Main:
+			strcpy(Str, "Main Task");
+			break;
+
+		case T_BBComm:
+			strcpy(Str, "BBComm Task");
+			break;
+			
+		case T_NFC:
+			strcpy(Str, "NFC Task");
+			break;
+			
+		case T_KeypadEpaper:
+			strcpy(Str, "KeypadEpaper Task");
+			break;
+
+		case T_LoadCell:
+			strcpy(Str, "LoadCell Task");
+			break;
+
+		case T_Lux:
+			strcpy(Str, "Lux Task");
+			break;
+			
+		case T_Servo:
+			strcpy(Str, "Servo Task");
+			break;
+			
+		case T_SpeakJet:
+			strcpy(Str, "SpeakJet Task");
+			break;
+			
+			case T_Outputs:
+			strcpy(Str, "Outputs Task");
+			break;
+		
+		/* BeagleBone Sources */
+		case BB_Main:
+			strcpy(Str, "Main Thread");
+			break;
+			
+		case BB_Logger:
+			strcpy(Str, "Logger Thread");
+			break;
+			
+		case BB_TivaComm:
+			strcpy(Str, "TivaComm Thread");
+			break;
+			
+		case BB_NFC:
+			strcpy(Str, "NFC Thread");
+			break;
+			
+		case BB_KeypadEpaper:
+			strcpy(Str, "KeypadEpaper Thread");
+			break;
+
+		case BB_LoadCell:
+			strcpy(Str, "LoadCell Thread");
+			break;
+
+		default:
+			strcpy(Str, "Unknown Thread/Task");
+			break;
+	}
+}
+
+
+
+void SendToLoggerThreadQ(uint8_t Src, char* Log, char* Message)
+{
+	Log_MsgStruct Msg2Send =
+	{
+		.ID = 1,
+		.Src = Src
 	};
 	strcpy(Msg2Send.LogLevel, Log);
 	strcpy(Msg2Send.Msg, Message);
 	
 	mqd_t MQ;						//Message queue descriptor
-	
-	char DEST_Q_NAME[16];			//This will store the name of destination queue
-	
-	/* Check what is the destination pThread */
-	switch(Msg2Send.Dest)
-	{
-		case Logger:
-			strcpy(DEST_Q_NAME, LOGGER_QUEUE);
-			break;
-
-		default:
-			Msg2Send.Dest = Logger;
-			strcpy(DEST_Q_NAME, LOGGER_QUEUE);
-			char *text1 = "WARNING - No destination thread for this msg!";
-			strcpy(Msg2Send.LogLevel, text1);
-			break;
-	}
-	
-	/* Open the chosen Thread POSIX queue - write only */
-	MQ = mq_open(DEST_Q_NAME, O_WRONLY | O_CLOEXEC);		//NOTE: IF YOU GET AN 'O_CLOEXEC' UNDEFINED ERROR ADD -D_GNU_SOURCE TO COMPILER OPTIONS
+		
+	/* Open the Logger Thread POSIX queue - write only */
+	MQ = mq_open(LOGGER_POSIX_Q, O_WRONLY | O_CLOEXEC);		//NOTE: IF YOU GET AN 'O_CLOEXEC' UNDEFINED ERROR ADD -D_GNU_SOURCE TO COMPILER OPTIONS
 	
 	
 	char ErrMsg[MSGSTR_SIZE];								//Temp variable
 	
+	
 	/* Error check */
 	if(MQ == (mqd_t) -1)
 	{
-		snprintf(ErrMsg, MSGSTR_SIZE, "SendToThreadQ() => mq_open(), attempted to open '%u' queue, called by thread '%u'", Msg2Send.Dest, Msg2Send.Source);
-		Log_Msg(0, Msg2Send.LogLevel, ErrMsg, errno, LOCAL_ONLY);
+		snprintf(ErrMsg, MSGSTR_SIZE, "SendToLoggerThreadQ() => mq_open(), attempted to open Logger queue");
+		Log_Msg(Msg2Send.Src, "ERROR", ErrMsg, errno, LOCAL_ONLY);
+		return;
 	}
 	
 	/* Send Msg to POSIX queue */
-	if(mq_send(MQ, &Msg2Send, sizeof(POSIX_MsgStruct), 0) != 0)
+	if(mq_send(MQ, &Msg2Send, sizeof(Log_MsgStruct), 0) != 0)
 	{
-		snprintf(ErrMsg, MSGSTR_SIZE, "SendToThreadQ() => mq_send(), attempted to send message '%s' from '%u' to '%u'", Msg2Send.Msg, Msg2Send.Source, Msg2Send.Dest);
-		Log_Msg(0, Msg2Send.LogLevel, ErrMsg, errno, LOCAL_ONLY);
+		snprintf(ErrMsg, MSGSTR_SIZE, "SendToLoggerThreadQ() => mq_send(), attempted to send message '%s' to Logger queue", Msg2Send.Msg);
+		Log_Msg(Msg2Send.Src, "ERROR", ErrMsg, errno, LOCAL_ONLY);
+		return;
 	}
 	
 	if(mq_close(MQ) != 0)
 	{
-		snprintf(ErrMsg, MSGSTR_SIZE, "SendToThreadQ() => mq_close(), attempted to close '%u' queue", Msg2Send.Source);
-		Log_Msg(0, Msg2Send.LogLevel, ErrMsg, errno, LOCAL_ONLY);
+		Log_Msg(Msg2Send.Src, "ERROR", "SendToLoggerThreadQ() => mq_close(), attempted to close Logger queue", errno, LOCAL_ONLY);
 	}
 }
 
@@ -132,25 +192,8 @@ void SendToThreadQ(uint8_t Src, uint8_t Dst, char* Log, char* Message)
 void Log_Msg(uint8_t Src, char* LogLvl, char* OutMsg, int errnum, uint8_t Mode)
 {
 	/* Get name of source */
-	char Source_text[20]; 
-	switch(Src)
-	{
-		case Main:
-			strcpy(Source_text, "Main Thread");
-			break;
-
-		case Logger:
-			strcpy(Source_text, "Logger Thread");
-			break;
-			
-		case TivaComm:
-			strcpy(Source_text, "TivaComm Thread");
-			break;
-
-		default:
-			strcpy(Source_text, "Unknown Thread");
-			break;
-	}
+	char Source_text[SRC_SIZE]; 
+	EnumtoString(Src, Source_text);
 	
 	/* This will store the final output message */
 	char Output_Log[MSGSTR_SIZE];
@@ -177,18 +220,18 @@ void Log_Msg(uint8_t Src, char* LogLvl, char* OutMsg, int errnum, uint8_t Mode)
 	switch(Mode)
 	{
 		case LOGGER_ONLY:
-			SendToThreadQ(Src, Logger, LogLvl, Output_Log);
+			SendToLoggerThreadQ(Src, LogLvl, Output_Log);
 			break;
 
 		case LOGGER_AND_LOCAL:
 			GetRealTime(CurTime, TIMESTR_SIZE);
-			printf("> [%s] '%s' (%s) => %s\n\n", CurTime, Source_text, LogLvl, Output_Log);
-			SendToThreadQ(Src, Logger, LogLvl, Output_Log);
+			printf("> [%s] Log Event(%s): %s\n> L->Source: %s\n\n", CurTime, LogLvl, Output_Log, Source_text);
+			SendToLoggerThreadQ(Src, LogLvl, Output_Log);
 			break;
 			
 		default:
 			GetRealTime(CurTime, TIMESTR_SIZE);
-			printf("> [%s] '%s' (%s) => %s\n\n", CurTime, Source_text, LogLvl, Output_Log);
+			printf("> [%s] Log Event(%s): %s\n> L->Source: %s\n\n", CurTime, LogLvl, Output_Log, Source_text);
 			break;
 	}
 }

@@ -27,8 +27,14 @@
 #include "Global_Defines.h"
 
 /* Global variables */
-extern char BB_Recv[100];
-extern uint16_t BB_Recv_Index;
+extern int BB_Recv_Index;
+extern bool STRUCT_READY;
+extern TivaBB_MsgStruct TESTSTRUCT;
+extern unsigned char *myPtr;
+extern const unsigned char *BytesToSend;
+extern int NumBytes;
+
+extern unsigned char buffer[];
 
 
 /*******************************************************************
@@ -192,16 +198,21 @@ void UART1_IntHandler(void)
 	/* Clear the asserted interrupts */
 	UARTIntClear(UART1_BASE, Flags);
 
-	/*Loop while there are characters in the receive FIFO */
-	while( UARTCharsAvail(UART1_BASE))
-	{
-		//
-		// Read the next character from the UART and write it back to the UART.
-		//
-		//	 UARTCharPutNonBlocking(UART1_BASE, UARTCharGetNonBlocking(UART1_BASE));
-		BB_Recv[BB_Recv_Index] = UARTCharGetNonBlocking(UART1_BASE);
-		BB_Recv_Index++;
-	}
+//	/*Loop while there are characters in the receive FIFO */
+//	if( UARTCharsAvail(UART1_BASE) )
+//	{
+//		buffer[BB_Recv_Index] = UARTCharGetNonBlocking(UART1_BASE);
+//
+//		if(buffer[BB_Recv_Index] == '!')
+//		{
+//			STRUCT_READY = true;
+//		}
+//		else
+//		{
+//			BB_Recv_Index++;
+//			UART_Putchar(UART1_BASE, '#');
+//		}
+//	}
 }
 
 

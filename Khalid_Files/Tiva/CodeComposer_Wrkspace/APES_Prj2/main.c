@@ -30,23 +30,35 @@
 #include "Global_Defines.h"
 #include "Master_Functions.h"
 #include "My_UART.h"
-#include "BB_Comm_Task.h"
+#include "Logger_Task.h"
+#include "BBComm_Task.h"
+#include "NFC_Task.h"
+#include "KeypadEpaper_Task.h"
+#include "LoadCell_Task.h"
+#include "Lux_Task.h"
+#include "Servo_Task.h"
+#include "SpeakJet_Task.h"
+#include "Outputs_Task.h"
 
 
 /* Global Variables */
 QueueHandle_t xQueue_Msgs = NULL;				//This is the queue the BB_Comm Task will read from and other tasks will send to
 
+
 //TEST
-char BB_Recv[100];
-uint16_t BB_Recv_Index = 0;
+volatile char BB_Recv[100];
+volatile int BB_Recv_Index = 0;
+volatile bool STRUCT_READY = false;
+volatile TivaBB_MsgStruct TESTSTRUCT;
+volatile unsigned char *myPtr = (unsigned char *)&TESTSTRUCT;
+const unsigned char *BytesToSend;
+int NumBytes = sizeof(TESTSTRUCT);
 
-
+unsigned char buffer[sizeof(TESTSTRUCT)+1];
 
 
 /* LAST WORKING ON:
- * BEAGLEBONE SIDE OF THE CODE.
- * NEED TO COME UP WITH PROPER WAY TO TALK TO BEAGLEBONE.
- * WAS TESTING RECIEVING ON THIS SIDE BUT DID NOT GET TO IT LOOK AT GLOBAL VARIABLE
+ *
  *
  * TO ASK PROF:
  * - STACK SIZE HEAP SIZE ON FREERTOS? I AM NOT SURE
@@ -70,7 +82,7 @@ uint16_t BB_Recv_Index = 0;
  *
  * 4- [COMPLETED!!! - THEY ALL WORK] TEST ALL NEWLY ADDED UARTS AND MAKE SURE TX WORKS FROM ALL
  *
- * 5- [] WORK ON RX => BB_Comm_Task()
+ * 5- [COMPLETED!!!] WORK ON RX => BB_Comm_Task(): RECIEVE TEST STRUCTURE FROM BB AND DECODE PROPERLY
  *
  * 6- [COMPLETED] THINK ABOUT HOW MSGS WILL BE STORED AND TRANSMITTED (CIRC BUFF AND UART? CIRC BUFF WOULD BE SENT TO BB AND
  * 		 		|  UART IS JUST LOCAL ECHO)
@@ -99,7 +111,8 @@ uint16_t BB_Recv_Index = 0;
  *
  * 15- [COMPLETED] REMOVE MY CIRC BUFF LIB
  *
- * 16- [] ADD BOOT-UP MSG
+ * 16- [COMPLETED] ADD BOOT-UP MSG
+ * 				L-> CREATED DisplayBootUpMsg()
  *
  * 17- [COMPLETED] CHANGE FREERTOS HEAP TYPE TO HEAP 3 OR 4
  * 				L-> USED heap_4.c
@@ -112,17 +125,29 @@ uint16_t BB_Recv_Index = 0;
  * 				    LAST PARAMETER BE TRUE. HOWEVER, YOU NEED TO DEFINE WHAT THE RX INTERUPPT WILL DO IN ITS
  * 				    SPECIFIC INTERUPPT HANDLER.
  *
- * 20- []
+ * 20- [COMPLETED] ADD TEST STRUCT (SAME AS BB SIDE)
+ *
+ * 21- [COMPLETED] ADD DEFINE FOR CURRENT VERSION TO UPDATE DYNAMICALLY
+ * 				L-> ONLY NEED OT CHANGE THE DEFINE IN Global_Defines.h
+ *
+ * 22- [COMPLETED!] TEST STRUCT SIZE ON TIVA SIDE
+ * 				L-> SIZE IS THE SAME AS BB SIDE => 86 BYTES!
+ *
+ * 23- [] RX STRUCT FROM BB, MODIFY, AND THEN TX BACK TO BB
+ *
+ * 24- [COMPLETED] CREATE ALL THE NEEDED BASE TASKS (NFC, KEYPADEPAPER, LOADCELL, LUX AND SERVO)
+ * 				L-> RESPECTIVE .h/.c FILES CREATED AND DEFINES ADDED AS WELL AS CALLS TO INIT FROM MAIN
+ *
+ * 25- [] CREATE A FUNCTION THAT LOGS TO BB AS A NORMAL LOG
+ *
+ * 26- [] CREATE UART SEND STRING FUNCTION
+ *
+ * 27- []
  *
  *
- * +++++++++++++++++++++ QUESTIONS: +++++++++++++++++++++
- * - [FROM HW 5 - STILL NEED TO DOUBLE CHECK] Is the current way I am sending messages correct and efficient? While
- *   searching I saw that pointers are used for large structs, however, if I declare a pointer struct and send it
- *   doesn't the pointer get overwritten the next time I send a message using the same pointer? Meaning if I use
- *   pointer I would have to malloc first then free after I receive and read it? Correct?
- *   ====> ANSWERED: CHECK TO DO LIST
- *
+ * +++++++++++++++++++++ CHANGES: +++++++++++++++++++++
  * -
+ *
  *
  */
 
@@ -136,9 +161,11 @@ int main()
 	/* Initialize the GPIO pins for the Launchpad */
 	PinoutSet(false, false);
 
+
+
 	/* Init UART0 - Used for local debugging and errors */
 	Init_UARTx(UART0, SYSTEM_CLOCK, 9600, false);
-	Log_UART0(GetCurrentTime(), Main, "INFO", "UART0 was init successfully!");
+	Log_UART0(GetCurrentTime(), T_Main, "INFO", "UART0 was init successfully!");
 
 	/* Displays messages to UART0 */
 	DisplayBootUpMsg(UART0);
@@ -147,18 +174,95 @@ int main()
 	IntMasterEnable();
 
 
-
-	/* Init BB_Comm Task */
-	if(BB_Comm_TaskInit())
+	/* Init Logger Task */
+	if(Logger_TaskInit())
 	{
-		Log_UART0(GetCurrentTime(), Main, "CRITICAL", "Could not init BB_Comm Task!");
+		Log_Msg(T_Main, "CRITICAL", "Could not init Logger Task!", LOCAL_ONLY);
 	}
 	else
 	{
-		Log_UART0(GetCurrentTime(), Main, "INFO", "BB_Comm Task init successfully!");
+		Log_Msg(T_Main, "INFO", "Logger Task init successfully!", LOCAL_ONLY);
 	}
 
+	/* Init BBComm Task */
+	if(BBComm_TaskInit())
+	{
+		Log_Msg(T_Main, "CRITICAL", "Could not init BBComm Task!", LOCAL_ONLY);
+	}
+	else
+	{
+		Log_Msg(T_Main, "INFO", "BBComm Task init successfully!", LOCAL_ONLY);
+	}
 
+	/* Init NFC Task */
+	if(NFC_TaskInit())
+	{
+		Log_Msg(T_Main, "CRITICAL", "Could not init NFC Task!", LOCAL_ONLY);
+	}
+	else
+	{
+		Log_Msg(T_Main, "INFO", "NFC Task init successfully!", LOCAL_ONLY);
+	}
+
+	/* Init KeypadEpaper Task */
+	if(KeypadEpaper_TaskInit())
+	{
+		Log_Msg(T_Main, "CRITICAL", "Could not init KeypadEpapaer Task!", LOCAL_ONLY);
+	}
+	else
+	{
+		Log_Msg(T_Main, "INFO", "KeypadEpapaer Task init successfully!", LOCAL_ONLY);
+	}
+
+	/* Init LoadCell Task */
+	if(LoadCell_TaskInit())
+	{
+		Log_Msg(T_Main, "CRITICAL", "Could not init LoadCell Task!", LOCAL_ONLY);
+	}
+	else
+	{
+		Log_Msg(T_Main, "INFO", "LoadCell Task init successfully!", LOCAL_ONLY);
+	}
+
+	/* Init Lux Task */
+	if(Lux_TaskInit())
+	{
+		Log_Msg(T_Main, "CRITICAL", "Could not init Lux Task!", LOCAL_ONLY);
+	}
+	else
+	{
+		Log_Msg(T_Main, "INFO", "Lux Task init successfully!", LOCAL_ONLY);
+	}
+
+	/* Init Servo Task */
+	if(Servo_TaskInit())
+	{
+		Log_Msg(T_Main, "CRITICAL", "Could not init Servo Task!", LOCAL_ONLY);
+	}
+	else
+	{
+		Log_Msg(T_Main, "INFO", "Servo Task init successfully!", LOCAL_ONLY);
+	}
+
+	/* Init SpeakJet Task */
+	if(SpeakJet_TaskInit())
+	{
+		Log_Msg(T_Main, "CRITICAL", "Could not init SpeakJet Task!", LOCAL_ONLY);
+	}
+	else
+	{
+		Log_Msg(T_Main, "INFO", "SpeakJet Task init successfully!", LOCAL_ONLY);
+	}
+
+	/* Init Outputs Task */
+	if(Outputs_TaskInit())
+	{
+		Log_Msg(T_Main, "CRITICAL", "Could not init Outputs Task!", LOCAL_ONLY);
+	}
+	else
+	{
+		Log_Msg(T_Main, "INFO", "Outputs Task init successfully!", LOCAL_ONLY);
+	}
 
 	vTaskStartScheduler();
 	return 0;

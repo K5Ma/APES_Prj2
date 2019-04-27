@@ -1,4 +1,5 @@
-> [Mon Apr 22 02:43:49] 'Logger Thread' (INFO) => Logfile successfully created! TID: 26271
+> [Sat Apr 27 00:14:57] Log Event(INFO): Logfile successfully created! TID: 29088
+> L->Source: Logger Thread
 
 
 > ***************************************************
@@ -10,9 +11,12 @@
 > *              'O'bviously 'M'arvelous            *
 > *                                                 *
 > *        By: Khalid AlAwadhi | Poorn Mehta        *
-> *                                            v1.1 *
+> *                                            v1.5 *
 > ***************************************************
 
-> [Mon Apr 22 02:43:51] Log Event(INFO): SUCCESS: Created TivaComm Thread!
+> [Sat Apr 27 00:14:59] Log Event(INFO): SUCCESS: Created TivaComm Thread!
 > L->Source: Main Thread
+
+> [Sat Apr 27 00:14:59] Log Event(INFO): UART1 port initialized successfully
+> L->Source: TivaComm Thread
 

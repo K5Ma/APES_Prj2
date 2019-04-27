@@ -71,6 +71,18 @@ void UART_Putchar(uint32_t UART_BASE, char TX_Char);
 void UART_Putchar_n(uint8_t UART_Num, char* TX_String);
 
 
+/**************************************************************************************************************
+ * USAGE: This function sends a TivaBB_MsgStruct structure to the wanted UART port.
+ *
+ * PARAMETERS:
+ *            - UART_Struct *UART => The UART port to send the struct to
+ *            - TivaBB_MsgStruct StructToSend => Structure to send
+ *
+ * RETURNS: Success => true
+ *          Failure => false
+ **************************************************************************************************************/
+//bool Send_Struct_UARTx(uint8_t UART_Num, TivaBB_MsgStruct StructToSend);
+
 
 /**************************************************************************************************************
  * USAGE: This function initializes any of the UARTs on the Tiva board.

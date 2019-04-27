@@ -38,25 +38,25 @@ void * LoggerThread(void * args)
 	struct mq_attr attr;
 	attr.mq_flags = 0;									/* Flags: 0 or O_NONBLOCK */
 	attr.mq_maxmsg = 10;								/* Max. # of messages on queue */
-	attr.mq_msgsize = sizeof(POSIX_MsgStruct);			/* Max. message size (bytes) */
+	attr.mq_msgsize = sizeof(Log_MsgStruct);			/* Max. message size (bytes) */
 	attr.mq_curmsgs = 0;								/* # of messages currently in queue */
 
 	/* Create the Logging Thread queue to get messages from other pThreads */
-	MQ = mq_open(LOGGER_QUEUE, O_CREAT | O_RDONLY | O_CLOEXEC, 0666, &attr);
+	MQ = mq_open(LOGGER_POSIX_Q, O_CREAT | O_RDONLY | O_CLOEXEC, 0666, &attr);
 	if(MQ == (mqd_t) -1)
 	{
-		Log_Msg(Logger, "CRITICAL", "mq_open()", errno, LOCAL_ONLY);
+		Log_Msg(BB_Logger, "CRITICAL", "mq_open()", errno, LOCAL_ONLY);
 	}
 
-	POSIX_MsgStruct MsgRecv;							//Temp variable used to store received messages
+	Log_MsgStruct MsgRecv;                              //Temp variable used to store received messages
 
 	/* Loop forever waiting for Msgs from other pThreads */
 	while(1)
 	{
 		/* Block until a msg is received */
-		if(mq_receive(MQ, &MsgRecv, sizeof(POSIX_MsgStruct), NULL) == -1)
+		if(mq_receive(MQ, &MsgRecv, sizeof(Log_MsgStruct), NULL) == -1)
 		{
-			Log_Msg(Logger, "ERROR", "mq_receive()", errno, LOCAL_ONLY);
+			Log_Msg(BB_Logger, "ERROR", "mq_receive()", errno, LOCAL_ONLY);
 		}
 		/* If a msg is received, log it */
 		else
@@ -65,16 +65,16 @@ void * LoggerThread(void * args)
 		}
 	}
 
-	if(mq_unlink(LOGGER_QUEUE) != 0)
+	if(mq_unlink(LOGGER_POSIX_Q) != 0)
 	{
-		Log_Msg(Logger, "ERROR", "mq_unlink()", errno, LOCAL_ONLY);
+		Log_Msg(BB_Logger, "ERROR", "mq_unlink()", errno, LOCAL_ONLY);
 	}
 	else
 	{
-		Log_Msg(Logger, "INFO", "Successfully unlinked Logger queue!", 0, LOCAL_ONLY);
+		Log_Msg(BB_Logger, "INFO", "Successfully unlinked Logger queue!", 0, LOCAL_ONLY);
 	}
 	
-	Log_Msg(Logger, "INFO", "Logger Thread has terminated successfully and will now exit", 0, LOCAL_ONLY);
+	Log_Msg(BB_Logger, "INFO", "Logger Thread has terminated successfully and will now exit", 0, LOCAL_ONLY);
 	return 0;
 }
 
@@ -92,16 +92,17 @@ void LogFile_Init(char* LogFilePath)
 	{
 		char TempMsg[100];
 		snprintf(TempMsg, 100, "Could not open file path %s", LogFilePath);
-		Log_Msg(Logger, "FATAL", TempMsg, errno, LOCAL_ONLY);
+		Log_Msg(BB_Logger, "FATAL", TempMsg, errno, LOCAL_ONLY);
 		exit(1);
 	}
+
 
 	/* NOTE:
 	 * Statements are stored in strings because we want to have a debug output functionality.
 	 * So, if we change anything in fprintf() we will also need to go to the printf() and
 	 * change the text there. Using string and storing our text there makes it easier
-	 * as we only need to change the text in one place rather than two. */
-	char* Line1 = "> [%s] 'Logger Thread' (INFO) => Logfile successfully created! TID: %ld\n\n";
+	 * as we only need to change the text in one place rather than two. */	 
+	char* Line1 = "> [%s] Log Event(INFO): Logfile successfully created! TID: %ld\n> L->Source: Logger Thread\n\n";
 	
 	char* Line2 = "\n\r> ***************************************************\n\r";
 	char* Line3 = "> *         APES Project 2 (BeagleBone Side):       *\n\r";
@@ -112,7 +113,8 @@ void LogFile_Init(char* LogFilePath)
 	char* Line8 = "> *              'O'bviously 'M'arvelous            *\n\r";
 	char* Line9 = "> *                                                 *\n\r";
 	char* Line10 = "> *        By: Khalid AlAwadhi | Poorn Mehta        *\n\r";
-	char* Line11 = "> *                                            v1.1 *\n\r";
+	char Line11[60];
+	snprintf(Line11, 60, "> *                                            v%s *\n\r", CURRENT_VER);
 	char* Line12 = "> ***************************************************\n\n\r";
 	
 	/* Temp variable to store current date/time */
@@ -156,44 +158,27 @@ void LogFile_Init(char* LogFilePath)
 
 
 
-void LogFile_Log(char* LogFilePath, POSIX_MsgStruct* Message)
+void LogFile_Log(char* LogFilePath, Log_MsgStruct* Message)
 {
 	/* File pointer */
 	FILE *MyFileP;
 
 	/* Modify the permissions of the file to append */
 	MyFileP = fopen(LogFilePath, "a");
-
+	
+	/* Get the source number and turn it into a string.
+	 * This is done for readability in the logging file */
+	char Source_text[SRC_SIZE];
+	EnumtoString(Message->Src, Source_text);
+	
 	if(MyFileP == NULL)
 	{
 		printf("> !! ERROR: Could not open log file: %s\n", LogFilePath);
-		printf("> 	|--> Logging from source '%u' failed\n", Message->Source);
-		printf("> 	|--> Destination: %u\n", Message->Dest);
+		printf("> 	|--> Logging from source '%s' failed\n", Source_text);
+		printf("> 	|--> Destination: Logger Thread\n");
 		printf("> 	|--> Log Level: %s\n", Message->LogLevel);
 		printf("> 	L--> Message: %s\n\n", Message->Msg);
 		return;
-	}
-
-	/* Get the source number and turn it into a string.
-	 * This is done for readability in the logging file */
-	char Source_text[20];
-	switch(Message->Source)
-	{
-		case Main:
-			strcpy(Source_text, "Main Thread");
-			break;
-
-		case Logger:
-			strcpy(Source_text, "Logger Thread");
-			break;
-
-		case TivaComm:
-			strcpy(Source_text, "TivaComm Thread");
-			break;
-
-		default:
-			strcpy(Source_text, "Unknown Thread");
-			break;
 	}
 
 
@@ -204,47 +189,9 @@ void LogFile_Log(char* LogFilePath, POSIX_MsgStruct* Message)
 	char CurTime[TIMESTR_SIZE];
 	GetRealTime(CurTime, TIMESTR_SIZE);
 
-
+	/* Log the event */
 	strcpy(text, "> [%s] Log Event(%s): %s\n> L->Source: %s\n\n");
-	
 	fprintf(MyFileP, text, CurTime, Message->LogLevel, Message->Msg, Source_text);
-	printf(text, CurTime, Message->LogLevel, Message->Msg, Source_text);
-
-
-//	switch(Message->Dest)
-//	{
-//		case Main:
-//			strcpy(text, "[%s] 'Main Thread' got msg from '%s'(%s) => %s\n\n");
-//			
-//			fprintf(MyFileP, text, CurTime, Source_text, Message->LogLevel, Message->Msg);
-//
-//			printf(text, text, CurTime, Source_text, Message->LogLevel, Message->Msg);
-//			break;
-//
-//		case Logger:
-//			strcpy(text, "[%s] 'Logger Thread' got msg from '%s'(%s) => %s\n\n");
-//			
-//			fprintf(MyFileP, text, CurTime, Source_text, Message->LogLevel, Message->Msg);
-//
-//			printf(text, text, CurTime, Source_text, Message->LogLevel, Message->Msg);
-//			break;
-//
-//		case TivaComm:
-//			strcpy(text, "[%s] 'TivaComm Thread' got msg from '%s'(%s) => %s\n\n");
-//			
-//			fprintf(MyFileP, text, CurTime, Source_text, Message->LogLevel, Message->Msg);
-//
-//			printf(text, text, CurTime, Source_text, Message->LogLevel, Message->Msg);
-//			break;
-//
-//		default:
-//			strcpy(text, "[%s] 'Unknown Thread' got msg from '%s'(%s) => %s\n\n");
-//			
-//			fprintf(MyFileP, text, CurTime, Source_text, Message->LogLevel, Message->Msg);
-//
-//			printf(text, text, CurTime, Source_text, Message->LogLevel, Message->Msg);
-//			break;
-//	}
 
 	/* Flush file output */
 	fflush(MyFileP);

@@ -24,7 +24,7 @@
 #define MY_UART_BB_H_
 
 #include <stdint.h>
- 
+#include "Global_Defines.h" 
 
 /* Available UARTs on my BeagleBone Enum */
 typedef enum
@@ -45,30 +45,46 @@ typedef struct
 } UART_Struct;
  
  
-/**************************************************************************************************************
- * USAGE: This function opens a chosen UART port on the BeagleBone Green board.
- *
- * 		  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
- *        !! Note: You MUST make sure you initialized the desired UARTs in the system itself! !!
- *        !!	   Run ls /dev/ttyO* and you should see an output like this:				  !!
- * 		  !!	   # /dev/ttyO0  /dev/ttyO1	/dev/ttyO2  /dev/ttyO3							  !!
- *		  !!	   Each of these map to an enabled UART on the BeagleBone system, O0 is UART0,!!
- *		  !!	   O1 is UART1, O2 is UART2 and O3 is UART3. Your system might have more or   !!
- *		  !!	   less so double check before calling this function.						  !!
- *        !!	   Do not use UART0 as that is used by the BeagleBone itself (did not test)	  !!
- * 		  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ 
+ 
+ /**************************************************************************************************************
+ * USAGE: Signal handler for UART1.
  *
  * PARAMETERS:
- * 			  - UART_Struct *UART => The UART structure to open 
- * 									 (Make sure you malloc it! Example:
- * 									  > UART_Struct *BB_UART1 = malloc(sizeof(UART_Struct));
- * 									  > BB_UART1->UART_ID = UART1;
- * 									  > BB_UART1->BaudRate = B9600;)
+ * 			  - int Status =>
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void UART1_RX_Signal_Handler(int Status);
+
+ 
+ 
+/**************************************************************************************************************
+ * USAGE: This function inits and opens a chosen UART port on the BeagleBone Green board. If UART1 is chosen,
+ *        it will also enable RX signal interruppts. 
+ *
+ *        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ *        !! Note: You MUST make sure you initialized the desired UARTs in the system itself! !!
+ *        !!	   Run ls /dev/ttyO* and you should see an output like this:				  !!
+ * 	      !!	   # /dev/ttyO0  /dev/ttyO1	/dev/ttyO2  /dev/ttyO3							  !!
+ *        !!	   Each of these map to an enabled UART on the BeagleBone system, O0 is UART0,!!
+ *		  !!	   O1 is UART1, O2 is UART2 and O3 is UART3. Your system might have more or   !!
+ *        !!	   less so double check before calling this function.						  !!
+ *        !!	   Do not use UART0 as that is used by the BeagleBone itself (did not test)	  !!
+ *        !!       To enable PINs try for example: $config-pin P9.21 uart                     !!
+ * 	      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ *
+ * PARAMETERS:
+ * 			  - UART_Struct *UART => The UART structure to open
+ *                                   (Make sure you malloc it! Example:
+ *                                    > UART_Struct *BB_UART1 = malloc(sizeof(UART_Struct));
+ *                                    > BB_UART1->UART_ID = UART1;
+ *                                    > BB_UART1->BaudRate = B9600;)
  *
  * RETURNS: Success => 0
- * 			Failure	=> -1
+ *          Failure => -1
  **************************************************************************************************************/
-int8_t Open_UARTx(UART_Struct *UART);
+int8_t Init_UARTx(UART_Struct *UART);
 
 
 
@@ -95,7 +111,21 @@ int8_t Close_UARTx(UART_Struct *UART);
  * RETURNS: Success => 0
  * 			Failure	=> -1
  **************************************************************************************************************/
-int8_t Send_UARTx(UART_Struct *UART, char *TX_String);
+int8_t Send_String_UARTx(UART_Struct *UART, char *TX_String);
+
+
+
+/**************************************************************************************************************
+ * USAGE: This function sends a TivaBB_MsgStruct structure to the wanted UART port.
+ * 
+ * PARAMETERS:
+ *            - UART_Struct *UART => The UART port to send the struct to
+ *            - TivaBB_MsgStruct StructToSend => Structure to send
+ *
+ * RETURNS: Success => true
+ *          Failure => false
+ **************************************************************************************************************/
+bool Send_Struct_UARTx(UART_Struct *UART, TivaBB_MsgStruct StructToSend);
 
 
 

@@ -32,40 +32,87 @@
 //#include <time.h>
 //#include <mqueue.h>
 
-
 #include <stdint.h>
+#include <stdbool.h>
+
 
 /***************************************
- *  Thread Numbering Enum:             *
- *  Used for source and destination    *   
+ *   Current Program Version define    *
+ ***************************************/
+#define CURRENT_VER 				"1.5"
+ 
+ 
+/***************************************
+ *  Task and Thread Numbering Enum:    *
+ *  Used for source and destination    *
  ***************************************/
 typedef enum
 {
-	Main = 1,
-	Logger = 2,
-	TivaComm = 3
+	/* Tiva Sources */
+	T_Main = 1,
+	T_BBComm = 2,
+	T_NFC = 3,
+	T_KeypadEpaper = 4,
+	T_LoadCell = 5,
+	T_Lux = 6,
+	T_Servo = 7,
+	T_SpeakJet = 8,
+	T_Outputs = 9,
+	/* BeagleBone Sources */
+	BB_Main = 10,
+	BB_Logger = 11,
+	BB_TivaComm = 12,
+	BB_NFC = 13, 
+	BB_KeypadEpaper = 14,
+	BB_LoadCell = 15
 } Sources;
 
 
 /*****************************************
- * This define should be used when sizing*
- * strings that will be used to store    *
- * messages in the system. Helps keeps   *
- * things consistent.                    *
+ * UART Bluetooth CMDs used in the code  * 
+ * logic to know where we are when TXing *
+ * or RXing                              *
  *****************************************/
+ #define START_CMD                  "?"
+ #define CONFIRM_CMD                "#"
+ #define END_CMD                    '!'
+
+
+/*****************************************
+ * String size defines                   *
+ *****************************************/
+//This define should be used when sizing
+//strings that will be used to store   
+//messages in the system. Helps keeps  
+//things consistent
 #define MSGSTR_SIZE					200
- 
+#define SRC_SIZE					21
+
 
 /***************************************
- *     POSIX Message Structure         *
+ *     All Structures                  *
  ***************************************/
-typedef struct POSIX_MsgStruct 
+#define MAX_STRUCT_SIZE				100
+
+//Struct used by Logger thread/task:
+typedef struct Log_MsgStruct 
 {
-	uint8_t Source;
-	uint8_t Dest;
+	uint8_t ID;
+	uint8_t Src;
 	char LogLevel[MSGSTR_SIZE];		//Expected values: INFO | WARNING | ERROR | CRITICAL | FATAL
 	char Msg[MSGSTR_SIZE];
-} POSIX_MsgStruct;
+} Log_MsgStruct;
+
+
+
+
+//typedef struct POSIX_MsgStruct 
+//{
+//	uint8_t Src;
+//	uint8_t Dest;
+//	char LogLevel[MSGSTR_SIZE];		//Expected values: INFO | WARNING | ERROR | CRITICAL | FATAL
+//	char Msg[MSGSTR_SIZE];
+//} POSIX_MsgStruct;
 
 
 /***************************************
@@ -81,7 +128,13 @@ typedef struct Pthread_ArgsStruct
 /***************************************
  *          POSIX Queues               *
  ***************************************/
-#define LOGGER_QUEUE				"/LOGGER_POSIX_Q"
+#define MAIN_POSIX_Q				"/MAIN_PQ"
+#define LOGGER_POSIX_Q				"/LOGGER_PQ"
+#define TIVACOMM_POSIX_Q			"/TIVACOMM_PQ"
+#define NFC_POSIX_Q					"/NFC_PQ"
+#define KEYPADEPAPER_POSIX_Q		"/KEYPADEPAPER_PQ"
+#define LOADCELL_POSIX_Q			"/LOADCELL_PQ"
+
 
 
 
@@ -104,6 +157,68 @@ typedef struct Pthread_ArgsStruct
 
 
 
+/***************************************
+ *     TiveBB Message Structure       *
+ ***************************************/
+ typedef struct TivaBB_MsgStruct 
+{
+	/* Source pThread */
+	uint8_t Src;
+	
+	/* Destination Task */
+	uint8_t Dest;
+	
+} TivaBB_MsgStruct;
+
+//typedef struct TivaBB_MsgStruct 
+//{
+//	/* NFC */
+//	uint8_t T_NFC_Tag_ID_Array[4]; 
+//	bool T_NFC_Error;
+//	
+//	/* EPaper */
+//	bool T_EP_Error;
+//	bool B_Update_EPaper;
+//	char B_Image_Name[10];
+//	
+//	/* KeyPad */
+//	uint8_t T_KeyPad_Code[6];
+//	bool T_KeyPad_Error;
+//	bool B_KeyPad_Poll;
+//	
+//	/* Load Cell */
+//	uint16_t T_LC_SamplesArraymv[20];
+//	bool T_LC_Error;
+//	bool B_Poll_LoadCell;
+//	
+//	/* BME280 */
+//	int16_t T_BME280_milliTemperatureCelcius;
+//	uint16_t T_BME280_milliHumidityPercent;
+//	bool T_BME280_Error;
+//	
+//	/* Lux */
+//	uint16_t T_Lux_Level;
+//	bool T_Lux_Error;
+//	bool B_Lux_Disable;
+//	
+//	/* Gas */
+//	uint16_t T_Gas_Level;
+//	bool T_Gas_Error;
+//	
+//	/* PIR */
+//	bool T_PIR_State;
+//	bool B_PIR_Disable;
+//	
+//	/* SpeakJet */
+//	uint8_t T_SJ_Data;
+//	
+//	/* Servo */
+//	bool B_Servo_Open;
+//	
+//	/* Output Indicators */
+//	uint8_t B_OI_Data;
+//	
+//} TivaBB_MsgStruct;
 
 
 

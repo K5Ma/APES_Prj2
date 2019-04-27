@@ -42,12 +42,12 @@ void LogFile_Init(char* LogFilePath);
  *
  * PARAMETERS:
  *            - char* LogFilePath => Path to the log file
- *            - POSIX_MsgStruct* Message => The message structure to decode and log
+ *            - Log_MsgStruct* Message => The message structure to decode and log
  *
  * RETURNS: NONE
  *
  **************************************************************************************************************/
-void LogFile_Log(char* LogFilePath, POSIX_MsgStruct* Message);
+void LogFile_Log(char* LogFilePath, Log_MsgStruct* Message);
 
 
 

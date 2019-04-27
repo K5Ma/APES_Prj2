@@ -23,6 +23,19 @@
 void DisplayBootUpMsg(uint8_t UARTPort);
 
 
+/**************************************************************************************************************
+ * USAGE: This function takes in a number and updates a given string with the name linked to the enum
+ *        (enums found in Global_Defines.h). Tasks are on Tiva while Threads are on BeagleBone.
+ *
+ * PARAMETERS:
+ *            - uint8_t EnumNum => The enum you want to get the name of
+ * 			  - char* Str => String to store the name into (Make sure it at least a size of 20 to work for all
+ *                                                          cases!)
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void EnumtoString(uint8_t EnumNum, char* Str);
+
 
 /**************************************************************************************************************
  * USAGE: This function will output a message to the UART0 (make sure to Init the UART first!). This function
@@ -39,6 +52,30 @@ void DisplayBootUpMsg(uint8_t UARTPort);
  **************************************************************************************************************/
 void Log_UART0(float CurrTime, uint8_t Src, char* LogLvl, char* Msg);
 
+
+
+/**************************************************************************************************************
+ * USAGE: This function will send a user message to the Logger Task to: send msg to the BBComm Task, output to
+ *        UART0, or both.
+ *
+ * PARAMETERS:
+ *            - uint8_t Src => Source of the message (Look at Global_Defines.h Source Enums)
+ *            - char* LogLvl => The level of the message (INFO | WARNING | ERROR | CRITICAL | FATAL)
+ *            - char* OutMsg => The message to display (will be dipalyed before the UNIX errorif applicable)
+ *            - uint8_t Mode => The below modes are already defined in Global_Defines.h
+ *                              0x01 = LOGGER_AND_LOCAL:    In this mode, the message will be displayed to
+ *                                                          the user b=via UART0 in addition to sending the
+ *                                                          message to the BeagleBone via BBComm task.
+ *
+ *                              0x02 = LOGGER_ONLY:         In this mode, the message will only be sent to the
+ *                                                          BBComm Task and then the BeagleBone.
+ *
+ *                              0x03 = LOCAL_ONLY(Default): In this mode, the message will only be displayed
+ *                                                          to user via UART0.
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void Log_Msg(uint8_t Src, char* LogLvl, char* OutMsg, uint8_t Mode);
 
 
 /**************************************************************************************************************
@@ -61,7 +98,7 @@ float GetCurrentTime();
  *
  * RETURNS: NONE
  **************************************************************************************************************/
-uint8_t SendMsgToBB(MsgStruct *MsgToSend);
+//uint8_t SendMsgToBB(MsgStruct *MsgToSend);
 
 
 #endif /* MY_INCLUDES_MASTER_FUNCTIONS_H_ */
