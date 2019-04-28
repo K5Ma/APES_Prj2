@@ -652,7 +652,7 @@ void BME280Task(void *pvParameters)
      *
      * Param_1: Null
      *
-     * Return_1: uint16_t BME280_milliTemperatureCelcius
+     * Return_1: int16_t BME280_milliTemperatureCelcius
      *          (To save size, I have converted float to integer
      *           and while doing that - multiplied float with 1000
      *           in order to get the required accuracy)

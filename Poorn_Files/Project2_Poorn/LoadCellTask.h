@@ -26,9 +26,7 @@
 #define LC_Max_Retries          5
 #endif
 
-#define LC_Polling_Timems       2500
-
-#define LC_Online_Test_Timems   (2 * LC_Polling_Timems)
+#define LC_Polling_Timems       1000
 
 #define LC_Host_Unknown           false
 
@@ -38,7 +36,7 @@
     #define LC_Print   cust_print
 #endif
 
-#define LC_INDIVIDUAL_TESTING  true
+#define LC_INDIVIDUAL_TESTING  false
 
 #define LC_DEBUG_PRINTF        true
 

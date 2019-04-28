@@ -1,12 +1,35 @@
 /*
- * SpeakJetTask.h
+ * PIRTask.h
  *
- *  Created on: Apr 20, 2019
- *      Author: poorn
+ *  Created on: Apr 23, 2019
+ *  Last Update: Apr 24, 2019
+ *      Author: Poorn Mehta
+ *
+ *  Driver for Interfacing with PIR Sensor which is connected
+ *  to TM4C1294XL (TIVA Development Board) using GPIO
+ *
+ *  This driver code is developed based on provided documentation from the manufacturer
+ *
  */
 
-#ifndef SPEAKJETTASK_H_
-#define SPEAKJETTASK_H_
+#ifndef PIRTASK_H_
+#define PIRTASK_H_
+
+#define PIR_Polling_Timems          500
+
+#define PIR_Host_Unknown           false
+
+#if     PIR_Host_Unknown
+    #define PIR_Print   UARTprintf
+#else
+    #define PIR_Print   cust_print
+#endif
+
+#define PIR_INDIVIDUAL_TESTING  true
+
+#define PIR_DEBUG_PRINTF        true
+
+#define PIR_Stay_Off_Timeoutms   60000
 
 // Standard Includes
 #include <stdlib.h>
@@ -14,6 +37,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 
 #include "drivers/pinout.h"
 #include "utils/uartstdio.h"
@@ -48,24 +72,8 @@
 // System clock rate, 120 MHz
 #define SYSTEM_CLOCK    120000000U
 
-#define     SJ_Enable_Pos       0
-#define     SJ_Enable_Mask      (1 << SJ_Enable_Pos)
+void PIR_Init(void);
+void PIR_Read(void);
+void PIRTask(void *pvParameters);
 
-#define     SJ_DayTime_Pos      1
-#define     SJ_DayTime_Mask     (3 << SJ_DayTime_Pos)
-#define     SJ_Morning_Time     (0 << SJ_DayTime_Pos)
-#define     SJ_Afternoon_Time   (1 << SJ_DayTime_Pos)
-#define     SJ_Evening_Time     (2 << SJ_DayTime_Pos)
-#define     SJ_Night_Time       (3 << SJ_DayTime_Pos)
-
-#define     SJ_Person_ID_Pos    3
-#define     SJ_Person_ID_Mask   (1 << SJ_Person_ID_Pos)
-#define     SJ_Person_ID_Poorn  (0 << SJ_Person_ID_Pos)
-#define     SJ_Person_ID_Khalid (1 << SJ_Person_ID_Pos)
-
-// Set up a memorable token for "Word Pause"
-#define WP 6    // 6 is 90ms pause
-
-void SpeakJetTask(void *pvParameters);
-
-#endif /* SPEAKJETTASK_H_ */
+#endif /* PIRTASK_H_ */

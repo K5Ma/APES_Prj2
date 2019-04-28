@@ -116,3 +116,17 @@ Poorn's Readme File
 
 >>Null
 
+
+**********v2.0********** (4/27/2019)
+
+>*Major Update*
+
+>>Modified Tasks, and Functionalities - to meet the basic requirements of the Project.
+
+>>Four Tasks are required for this: NFC, EPaper & Keypad, LoadCell, and OutputIndicators.
+
+>>All these tasks are ready for integration with Khalid's central structure.
+
+>>TODO (for fully functional project): Modify OutputIndicators Task, and Create a new LocalSafety Task.
+
+

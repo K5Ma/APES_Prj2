@@ -35,10 +35,10 @@
     #define NFC_Max_Retries          5
 #endif
 
-#define NFC_Polling_Timems       500
-#define NFC_Wait_Timems          2500
+#define NFC_Polling_Timems       1000
+#define NFC_Wait_Timems          1000
 
-#define NFC_Online_Test_Timems   2500
+#define NFC_Online_Test_Timems   1000
 
 #define NFC_Host_Unknown           false
 
@@ -48,7 +48,7 @@
     #define NFC_Print   cust_print
 #endif
 
-#define NFC_INDIVIDUAL_TESTING  true
+#define NFC_INDIVIDUAL_TESTING  false
 
 #define NFC_DEBUG_PRINTF        true
 

@@ -43,6 +43,230 @@ uint8_t LC_us = 0;
 uint8_t LC_Retries;
 bool LC_Error;
 
+
+typedef struct {
+    uint16_t LC_SamplesArraymv[LC_MaxSamples];
+} LC_T2B_Struct;
+
+typedef struct {
+    bool LC_Poll;
+} LC_B2T_Struct;
+
+
+LC_T2B_Struct LC_Tx;
+LC_B2T_Struct LC_Rx;
+
+/*
+ *
+ * Callback Function for Load Cell Task
+ *
+ * Return: Null
+ *
+ */
+void LoadCellTask(void *pvParameters)
+{
+    static uint8_t storedsamplecount, i;
+
+    LC_Error = false;
+
+    for(i = 0; i < LC_MaxSamples; i ++)     LC_Tx.LC_SamplesArraymv[i] = 0;
+
+    static char tp[50];
+    static uint16_t millivolts;
+
+    LC_TimerInit();
+    LC_DriverInit();
+    LC_TestSensor();
+
+    if(LC_Error == false)
+    {
+        //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send LC BIST Success LOG to BB
+        #if     LC_DEBUG_PRINTF
+            LC_Print("\nLoadCell Initialized");
+            LC_Print("\nStarting LC Normal Operation");
+        #endif
+    }
+    else
+    {
+        //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send LC BIST Failure LOG to BB
+        #if     LC_DEBUG_PRINTF
+            LC_Print("\nLoadCell Initialization Failed");
+        #endif
+    }
+
+#if     LC_INDIVIDUAL_TESTING
+
+        /*
+         * This portion just tests the Load Cell individually
+         * It doesn't rely on anything that is not covered
+         * or provided by its own header and source files
+         *
+         * This mode is only for raw testing, and may not
+         * include any of the error checking feature(s)
+         */
+
+    static uint8_t valid;
+
+    while(1)
+    {
+        LC_ClearClk();
+
+        while(LC_ReadDataPinStatus() == true)   vTaskDelay(1);
+
+        millivolts = (LC_ReadLoadCellVoltage() * 1000);
+
+        if((millivolts > LC_FilterLowThresholdmv) && (millivolts < LC_FilterHighThresholdmv))
+        {
+            if((millivolts >= LC_VerificationLowmv) && (millivolts <= LC_VerificationHighmv))    valid += 1;
+            else    valid = 0;
+
+            if(valid >= LC_ConsecutiveVerificationNeeded)
+            {
+                LC_Print("\n>>>>>>>>>>>>DOOR OPEN<<<<<<<<<<<<<<<");
+                valid = 0;
+            }
+
+            snprintf(tp, sizeof(tp), "\nMillivolts: %d", millivolts);
+            LC_Print(tp);
+        }
+        else
+        {
+            #if     LC_DEBUG_PRINTF
+                        LC_Print("\nLoadCell Voltage is outside Valid Range");
+            #endif
+        }
+
+        vTaskDelay((1000 / LC_PollingFrequencyHz));
+    }
+
+#else
+
+    /*
+     * Normal Operation (Parameters and Returns indicate communication with Central Task)
+     *
+     * This Task should get 1 parameter from central task through IPC
+     *
+     * This Task will have 1 array of LC_MaxSamples length - all in uint16_t
+     * that should be reported back to the central task through IPC
+     * It will also report back the current state of the LoadCell
+     *
+     * Param_1: bool LC_Rx.LC_Poll
+     *          (false: don't do anything, true: start polling Load Cell)
+     *
+     * Return_1: uint16_t LC_Tx.LC_SamplesArraymv[LC_MaxSamples]
+     *          (this will have samples recorded on specified frequency, which are to be
+     *           processed by Control Node and take a decision. Therefore, the entire array
+     *           must be transferred to Central Task through proper IPC method. In case of
+     *           the sensor failure, the array will be filled with zeroes.)
+     *
+     * Return_2: bool LC_Error
+     *           (false: Online, true: OFfline - error present)
+     *
+     */
+
+    while(1)
+    {
+        // Nothing important to do. Just wait
+        vTaskDelay(LC_Polling_Timems);
+
+        // If the Load Cell module seems to be offline, try to get it back online
+        // by reinitializing the interface, and waiting for a valid sample with timeout
+        // This feature supports both - limited and infinite retry modes
+        if(LC_Error == true)
+        {
+            //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send LC Failure LOG to BB
+            #if     (LC_Retry_Mode == LC_Limited)
+                if(LC_Retries != 0x00)
+                {
+                    LC_Retries -= 1;
+            #endif
+                    #if     LC_DEBUG_PRINTF
+                            LC_Print("\nRetrying Connection with LoadCell");
+                    #endif
+
+                    LC_TimerInit();
+                    LC_DriverInit();
+                    LC_TestSensor();
+
+                    #if     LC_DEBUG_PRINTF
+                            if(LC_Error == false)   LC_Print("\nLoadCell is Back Online");
+                            else    LC_Print("\nRetry Failed");
+                    #endif
+            #if     (LC_Retry_Mode == LC_Limited)
+                }
+            #endif
+        }
+        else
+        {
+            //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send LC Online LOG to BB
+            // Check the status of Load Cell on regular intervals
+            LC_TestSensor();
+            #if     LC_DEBUG_PRINTF
+                    LC_Print("\nChecking LoadCell Status...");
+                    if(LC_Error == false)   LC_Print("\nLoadCell is Online");
+                    else    LC_Print("\nLoadCell is Offline");
+            #endif
+        }
+
+        //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Receive LC_Rx structure from BBComm Task with 100ms Timeout
+
+        if((LC_Rx.LC_Poll == true) && (LC_Error == false))
+        {
+            for(i = 0; i < LC_MaxSamples; i ++)     LC_Tx.LC_SamplesArraymv[i] = 0;
+
+            storedsamplecount = 0;
+
+            // Taking samples till the entire array is filled up
+            while(storedsamplecount < LC_MaxSamples)
+            {
+
+                // Clearing the clock because it should be idle when not reading
+                // anything from the module
+                LC_ClearClk();
+
+                // Testing sensor/waiting for the module to have a valid sample ready
+                LC_TestSensor();
+
+                // Proceed only if there was no timeout, otherwise - write a 0 in the array
+                if(LC_Error == false)
+                {
+
+                    // Converting float voltages to integer millivolts (to save size)
+                    millivolts = (LC_ReadLoadCellVoltage() * 1000);
+
+                    // Filtering samples - so that the processing on the Control Node becomes easier
+                    if((millivolts > LC_FilterLowThresholdmv) && (millivolts < LC_FilterHighThresholdmv))   LC_Tx.LC_SamplesArraymv[storedsamplecount ++] = millivolts;
+                    else        LC_Tx.LC_SamplesArraymv[storedsamplecount ++] = 0;
+                    #if     LC_DEBUG_PRINTF
+                            snprintf(tp, sizeof(tp), "\nMillivolts: %d", millivolts);
+                            LC_Print(tp);
+                    #endif
+                }
+
+                // There was a timeout, write a 0
+                else        LC_Tx.LC_SamplesArraymv[storedsamplecount ++] = 0;
+
+                // Waiting for period defined by polling frequency of the sensor
+                vTaskDelay((1000 / LC_PollingFrequencyHz));
+            }
+
+            // Resetting polling flag
+            LC_Rx.LC_Poll = false;
+
+            #if     LC_DEBUG_PRINTF
+                for(i = 0; i < LC_MaxSamples; i ++)
+                {
+                    snprintf(tp, sizeof(tp), "\nSample[%d]: %d", i, LC_Tx.LC_SamplesArraymv[i]);
+                    LC_Print(tp);
+                }
+            #endif
+
+            //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Transmit LC_Tx structure to BBComm Task
+        }
+    }
+#endif
+}
+
 /*
  * Function to handle timer0 interrupts
  * (triggering at every 1 microsecond, when timer is running)
@@ -222,238 +446,3 @@ float LC_ReadLoadCellVoltage(void)
     }
 }
 
-/*
- *
- * Callback Function for Load Cell Task
- *
- * Return: Null
- *
- */
-void LoadCellTask(void *pvParameters)
-{
-    LC_Error = false;
-
-    static char tp[50];
-    static uint16_t millivolts;
-
-    LC_TimerInit();
-    LC_DriverInit();
-
-    #if     LC_DEBUG_PRINTF
-                LC_Print("\nLoadCell Init Completed");
-    #endif
-
-#if     LC_INDIVIDUAL_TESTING
-
-        /*
-         * This portion just tests the Load Cell individually
-         * It doesn't rely on anything that is not covered
-         * or provided by its own header and source files
-         *
-         * This mode is only for raw testing, and may not
-         * include any of the error checking feature(s)
-         */
-
-    static uint8_t valid;
-
-    while(1)
-    {
-        LC_ClearClk();
-
-        while(LC_ReadDataPinStatus() == true)   vTaskDelay(1);
-
-        millivolts = (LC_ReadLoadCellVoltage() * 1000);
-
-        if((millivolts > LC_FilterLowThresholdmv) && (millivolts < LC_FilterHighThresholdmv))
-        {
-            if((millivolts >= LC_VerificationLowmv) && (millivolts <= LC_VerificationHighmv))    valid += 1;
-            else    valid = 0;
-
-            if(valid >= LC_ConsecutiveVerificationNeeded)
-            {
-                LC_Print("\n>>>>>>>>>>>>DOOR OPEN<<<<<<<<<<<<<<<");
-                valid = 0;
-            }
-
-            snprintf(tp, sizeof(tp), "\nMillivolts: %d", millivolts);
-            LC_Print(tp);
-        }
-        else
-        {
-            #if     LC_DEBUG_PRINTF
-                        LC_Print("\nLoadCell Voltage is outside Valid Range");
-            #endif
-        }
-
-        vTaskDelay((1000 / LC_PollingFrequencyHz));
-    }
-
-#else
-
-    /*
-     * Normal Operation (Parameters and Returns indicate communication with Central Task)
-     *
-     * This Task should get 1 parameter from central task through IPC
-     *
-     * This Task will have 1 array of LC_MaxSamples length - all in uint16_t
-     * that should be reported back to the central task through IPC
-     * It will also report back the current state of the LoadCell
-     *
-     * Param_1: bool Poll_LoadCell
-     *          (false: don't do anything, true: start polling Load Cell)
-     *
-     * Return_1: uint16_t LC_SamplesArraymv[LC_MaxSamples]
-     *          (this will have samples recorded on specified frequency, which are to be
-     *           processed by Control Node and take a decision. Therefore, the entire array
-     *           must be transferred to Central Task through proper IPC method. In case of
-     *           the sensor failure, the array will be filled with zeroes.)
-     *
-     * Return_2: bool LC_Error
-     *           (false: Online, true: OFfline - error present)
-     *
-     */
-
-    static uint8_t storedsamplecount, idletimecount;
-    static uint16_t LC_SamplesArraymv[LC_MaxSamples];
-
-    idletimecount = 0;
-
-    while(1)
-    {
-        // Check the status of Load Cell on regular intervals
-        if(idletimecount >= (LC_Online_Test_Timems / LC_Polling_Timems))
-        {
-            LC_TestSensor();
-            #if     LC_DEBUG_PRINTF
-                    LC_Print("\nChecking LoadCell Status...");
-                    if(LC_Error == false)   LC_Print("\nLoadCell is Online");
-                    else    LC_Print("\nLoadCell is Offline");
-            #endif
-            idletimecount = 0;
-        }
-
-        // If the Load Cell module seems to be offline, try to get it back online
-        // by reinitializing the interface, and waiting for a valid sample with timeout
-        // This feature supports both - limited and infinite retry modes
-        if(LC_Error == true)
-        {
-        #if     (LC_Retry_Mode == LC_Limited)
-            if(LC_Retries != 0x00)
-            {
-                LC_Retries -= 1;
-        #endif
-                LC_TimerInit();
-                LC_DriverInit();
-                LC_TestSensor();
-        #if     (LC_Retry_Mode == LC_Limited)
-            }
-        #endif
-        }
-
-        if((Poll_LoadCell == true) && (LC_Error == false))
-        {
-            storedsamplecount = 0;
-
-            // Taking samples till the entire array is filled up
-            while(storedsamplecount <= LC_MaxSamples)
-            {
-
-                // Clearing the clock because it should be idle when not reading
-                // anything from the module
-                LC_ClearClk();
-
-                // Resetting the variable used to sense the timeout
-                noresptime = 0;
-
-                // Testing sensor/waiting for the module to have a valid sample ready
-                LC_TestSensor();
-
-                // Proceed only if there was no timeout, otherwise - write a 0 in the array
-                if(LC_Error == false)
-                {
-
-                    // Converting float voltages to integer millivolts (to save size)
-                    millivolts = (LC_ReadLoadCellVoltage() * 1000);
-
-                    // Filtering samples - so that the processing on the Control Node becomes easier
-                    if((millivolts > LC_FilterLowThresholdmv) && (millivolts < LC_FilterHighThresholdmv))   LC_SamplesArraymv[storedsamplecount ++] = millivolts;
-                    else        LC_SamplesArraymv[storedsamplecount ++] = 0;
-                    #if     LC_DEBUG_PRINTF
-                            snprintf(tp, sizeof(tp), "\nMillivolts: %d", millivolts);
-                            LC_Print(tp);
-                    #endif
-                }
-
-                // There was a timeout, write a 0
-                else        LC_SamplesArraymv[storedsamplecount ++] = 0;
-
-                // Waiting for period defined by polling frequency of the sensor
-                vTaskDelay((1000 / LC_PollingFrequencyHz));
-            }
-
-            // Resetting polling flag
-            Poll_LoadCell = false;
-        }
-
-        // Nothing important to do. Just wait
-        vTaskDelay(LC_Polling_Timems);
-        idletimecount += 1;
-    }
-#endif
-
-
-}
-
-//void adc_all(void *pvParameters)
-//{
-//    LC_Print("\nADC Setup Start");
-//
-//    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
-//
-//    SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC0);
-//
-//    GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_3);
-//
-//    ADCClockConfigSet(ADC0_BASE, ADC_CLOCK_SRC_PIOSC | ADC_CLOCK_RATE_HALF, 1);
-//
-//    ADCSequenceConfigure(ADC0_BASE, 0, ADC_TRIGGER_PROCESSOR, 0);
-//
-//    ADCHardwareOversampleConfigure(ADC0_BASE, 16);
-//
-//    ADCSoftwareOversampleConfigure(ADC0_BASE, 0, 8);
-//
-//    ADCSoftwareOversampleStepConfigure(ADC0_BASE, 0, 0, (ADC_CTL_CH0 | ADC_CTL_END));
-//
-//    ADCSequenceEnable(ADC0_BASE, 0);
-//
-//    static uint32_t adc_data[32], adc_avg;
-//    static uint8_t samples_count, i;
-//    static char tp[50];
-//
-//    LC_Print("\nADC Setup Done");
-//
-//    while(1)
-//    {
-//        ADCProcessorTrigger(ADC0_BASE, 0);
-//
-//        while(ADCBusy(ADC0_BASE));
-//
-//        samples_count = ADCSequenceDataGet(ADC0_BASE, 0, &adc_data[0]);
-//
-//        snprintf(tp, sizeof(tp), "\nSamples: %d", samples_count);
-//        LC_Print(tp);
-//
-//        adc_avg = 0;
-//
-//        for(i = 0; i < samples_count; i++)
-//        {
-//            adc_avg += adc_data[i];
-//        }
-//        adc_avg >>= 3;
-//
-//        snprintf(tp, sizeof(tp), "\nAvg ADC: %d", adc_avg);
-//        LC_Print(tp);
-//
-//        vTaskDelay(1000);
-//    }
-//}

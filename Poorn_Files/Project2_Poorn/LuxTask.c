@@ -328,7 +328,7 @@ void Lux_read(void)
  * This Task requires 1 parameter from Central Task through IPC
  *
  * This Task will return 1 integer value containing Lux Level
- * It will also report back the success or failure of keypad scanning operation
+ * It will also report back the current sensor state
  *
  * Param_1: bool Lux_Disable
  *          (false: keep polling, true: stop the sensor for 60 seconds)

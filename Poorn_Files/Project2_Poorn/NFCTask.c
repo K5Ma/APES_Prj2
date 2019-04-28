@@ -44,14 +44,179 @@
 #include "task.h"
 #include "queue.h"
 
+typedef struct {
+    uint8_t ID;
+    uint8_t Src;
+    uint8_t NFC_Tag_ID_Array[4];
+} NFC_T2B_Struct;
+
+NFC_T2B_Struct NFC_Tx;
+
 // Variables that will be shared between functions
 bool NFC_Error, NFC_Tag_Mode, NFC_Startup_Mode;
-uint8_t NFC_Tag_ID_Array[4], NFC_Retries;
+uint8_t NFC_Retries;
 uint8_t NFC_Rx_Array[25];
 
 const uint8_t NFC_WakeUp[]={0x55,0x55,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xff,0x03,0xfd,0xd4,0x14,0x01,0x17,0x00};
 const uint8_t NFC_FirmwareVersion[]={0x00,0x00,0xFF,0x02,0xFE,0xD4,0x02,0x2A,0x00};
 const uint8_t NFC_TagRead[]={0x00,0x00,0xFF,0x04,0xFC,0xD4,0x4A,0x01,0x00,0xE1,0x00};
+
+/*
+ *
+ * Callback Function for NFC Task
+ *
+ * Return: Null
+ *
+ */
+void NFCTask(void *pvParameters)
+{
+    NFC_Tag_Mode = false;
+    NFC_Error = false;
+
+    NFC_UART_Init();
+
+    #if     NFC_DEBUG_PRINTF
+        NFC_Print("\nNFC UART Init Done");
+    #endif
+
+    if(NFC_Module_Init() == true)   NFC_Error = true;
+    else    NFC_Error = false;
+
+    if(NFC_Error == true)
+    {
+        //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send NFC BIST Failure LOG to BB
+        #if     (NFC_Retry_Mode == NFC_Limited)
+            NFC_Retries = NFC_Max_Retries;
+        #endif
+        #if     NFC_DEBUG_PRINTF
+            NFC_Print("\nNFC Module Initialization Failed");
+        #endif
+    }
+    else
+    {
+        #if     NFC_DEBUG_PRINTF
+            NFC_Print("\nNFC Module Initialization Succeeded");
+        #endif
+    }
+
+    if(NFC_Verify_Firmware_Version())   NFC_Error = true;
+    else    NFC_Error = false;
+
+    if(NFC_Error == true)
+    {
+        //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send NFC BIST Failure LOG to BB
+        #if     (NFC_Retry_Mode == NFC_Limited)
+            NFC_Retries = NFC_Max_Retries;
+        #endif
+        #if     NFC_DEBUG_PRINTF
+            NFC_Print("\nNFC Firmwave Version Verification Failed");
+        #endif
+    }
+    else
+    {
+        //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send NFC BIST Success LOG to BB
+        #if     NFC_DEBUG_PRINTF
+            NFC_Print("\nNFC Firmwave Version Verification Succeeded");
+            NFC_Print("\nStarting NFC Normal Operation");
+        #endif
+    }
+
+#if    NFC_INDIVIDUAL_TESTING
+
+    /*
+     * This portion just tests the NFC Module individually
+     * It doesn't rely on anything that is not covered
+     * or provided by its own header and source files
+     *
+     * This mode is only for raw testing, and may not
+     * include any of the error checking feature(s)
+     */
+
+    while(1)
+    {
+        if(NFC_Read_Tag_ID() == true)
+        {
+            NFC_Error = true;
+            #if     (NFC_Retry_Mode == NFC_Limited)
+                NFC_Retries = NFC_Max_Retries;
+            #endif
+            #if     NFC_DEBUG_PRINTF
+                NFC_Print("\nNFC Tag Read Command Failed");
+            #endif
+        }
+        else
+        {
+            #if     NFC_DEBUG_PRINTF
+                NFC_Print("\nNFC Tag Read Command Succeeded");
+            #endif
+        }
+
+        if(NFC_Error == true)   NFC_Sensor_Test();
+        else
+        {
+            #if     NFC_DEBUG_PRINTF
+                NFC_Print("\nNFC Tag Read Command Sent");
+            #endif
+        }
+
+        vTaskDelay(NFC_Polling_Timems);
+    }
+#else
+
+    /*
+     * Normal Operation (Parameters and Returns indicate communication with Central Task)
+     *
+     * This Task does not require any parameter to get from central task through IPC
+     * since this is the first step in the verification, and this task should always be running
+     *
+     * This Task will have have 1 array of 4 bytes length
+     * that should be reported back to the central task through IPC
+     * It will also report back the current state of the NFC Module
+     *
+     * Param_1: Null
+     *
+     * Return_1: uint8_t NFC_Tx.NFC_Tag_ID_Array[4]
+     *          (this will contain the 4 ID bytes of the NFC tag presented at the Module)
+     *
+     * Return_2: bool NFC_Error
+     *           (false: Online, true: OFfline - error present)
+     *
+     */
+
+    while(1)
+    {
+        vTaskDelay(NFC_Polling_Timems);
+
+        if(NFC_Error == true)
+        {
+            //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send NFC Failure LOG to BB
+            NFC_Sensor_Test();
+        }
+        else
+        {
+            //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send NFC Online LOG to BB
+            if(NFC_Read_Tag_ID() == true)
+            {
+                NFC_Error = true;
+                #if     (NFC_Retry_Mode == NFC_Limited)
+                    NFC_Retries = NFC_Max_Retries;
+                #endif
+                #if     NFC_DEBUG_PRINTF
+                    NFC_Print("\nNFC Tag Read Command Failed");
+                #endif
+            }
+
+            if((NFC_Tag_Mode == true) && (NFC_Error == false))
+            {
+                //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send NFC_Tx structure to BBComm Task
+                #if     NFC_DEBUG_PRINTF
+                    NFC_Print("\nSending NFC Tag to Control Node");
+                #endif
+            }
+        }
+    }
+#endif
+}
 
 /*
  * Function to setup UART5 bus for NFC
@@ -168,9 +333,9 @@ bool NFC_Verify_Firmware_Version(void)
     static uint8_t i;
     NFC_Startup_Mode = true;
 
-    #if     NFC_DEBUG_PRINTF
-        NFC_Print("\nVerifying NFC Firmware Version");
-    #endif
+//    #if     NFC_DEBUG_PRINTF
+//        NFC_Print("\nVerifying NFC Firmware Version");
+//    #endif
     for(i = 0; i < sizeof(NFC_FirmwareVersion); i ++)    UARTCharPut(UART5_BASE, NFC_FirmwareVersion[i]);
 
     if(NFC_Get_Verify_Standard_ACK() == true)      return true;
@@ -240,6 +405,8 @@ bool NFC_Read_Tag_ID(void)
     static char tp[50];
     static uint8_t rxbyte;
 
+    for(i = 0; i < 4; i ++)     NFC_Tx.NFC_Tag_ID_Array[i] = 0;
+
     #if     NFC_DEBUG_PRINTF
         NFC_Print("\nWaiting for Tag");
     #endif
@@ -263,14 +430,14 @@ bool NFC_Read_Tag_ID(void)
 
     if(NFC_Tag_Mode == true)
     {
-        for(i = 0; i < NFC_Tag_ID_Length; i ++)    NFC_Tag_ID_Array[i] = NFC_Rx_Array[(i + NFC_Standard_ACK_Size + NFC_Tag_ID_Start_Byte_Pos)];
+        for(i = 0; i < NFC_Tag_ID_Length; i ++)    NFC_Tx.NFC_Tag_ID_Array[i] = NFC_Rx_Array[(i + NFC_Standard_ACK_Size + NFC_Tag_ID_Start_Byte_Pos)];
         #if     NFC_DEBUG_PRINTF
-            snprintf(tp, sizeof(tp), "\nTag ID: %02X:%02X:%02X:%02X", NFC_Tag_ID_Array[0], NFC_Tag_ID_Array[1], NFC_Tag_ID_Array[2], NFC_Tag_ID_Array[3]);
+            snprintf(tp, sizeof(tp), "\nTag ID: %02X:%02X:%02X:%02X", NFC_Tx.NFC_Tag_ID_Array[0], NFC_Tx.NFC_Tag_ID_Array[1], NFC_Tx.NFC_Tag_ID_Array[2], NFC_Tx.NFC_Tag_ID_Array[3]);
             NFC_Print(tp);
         #endif
-        vTaskDelay(NFC_Wait_Timems);
+//        vTaskDelay(NFC_Wait_Timems);
     }
-    else    for(i = 0; i < NFC_Tag_ID_Length; i ++)    NFC_Tag_ID_Array[i] = 0;
+    else    for(i = 0; i < NFC_Tag_ID_Length; i ++)    NFC_Tx.NFC_Tag_ID_Array[i] = 0;
 
     return false;
 }
@@ -317,156 +484,4 @@ bool NFC_Module_Init(void)
     #endif
 
     return false;
-}
-
-/*
- *
- * Callback Function for NFC Task
- *
- * Return: Null
- *
- */
-void NFCTask(void *pvParameters)
-{
-    NFC_Tag_Mode = false;
-    NFC_Error = false;
-
-    NFC_UART_Init();
-
-    #if     NFC_DEBUG_PRINTF
-        NFC_Print("\nNFC UART Init Done");
-    #endif
-
-    if(NFC_Module_Init() == true)   NFC_Error = true;
-    else    NFC_Error = false;
-
-    if(NFC_Error == true)
-    {
-        #if     (NFC_Retry_Mode == NFC_Limited)
-            NFC_Retries = NFC_Max_Retries;
-        #endif
-        #if     NFC_DEBUG_PRINTF
-            NFC_Print("\nNFC Module Initialization Failed");
-        #endif
-    }
-    else
-    {
-        #if     NFC_DEBUG_PRINTF
-            NFC_Print("\nNFC Module Initialization Succeeded");
-        #endif
-    }
-
-    if(NFC_Verify_Firmware_Version())   NFC_Error = true;
-    else    NFC_Error = false;
-
-    if(NFC_Error == true)
-    {
-        #if     (NFC_Retry_Mode == NFC_Limited)
-            NFC_Retries = NFC_Max_Retries;
-        #endif
-        #if     NFC_DEBUG_PRINTF
-            NFC_Print("\nNFC Firmwave Version Verification Failed");
-        #endif
-    }
-    else
-    {
-        #if     NFC_DEBUG_PRINTF
-            NFC_Print("\nNFC Firmwave Version Verification Succeeded");
-        #endif
-    }
-
-    NFC_Print("\nNormal Operation Start");
-
-#if    NFC_INDIVIDUAL_TESTING
-
-    /*
-     * This portion just tests the NFC Module individually
-     * It doesn't rely on anything that is not covered
-     * or provided by its own header and source files
-     *
-     * This mode is only for raw testing, and may not
-     * include any of the error checking feature(s)
-     */
-
-    while(1)
-    {
-        if(NFC_Read_Tag_ID() == true)
-        {
-            NFC_Error = true;
-            #if     (NFC_Retry_Mode == NFC_Limited)
-                NFC_Retries = NFC_Max_Retries;
-            #endif
-            #if     NFC_DEBUG_PRINTF
-                NFC_Print("\nNFC Tag Read Command Failed");
-            #endif
-        }
-        else
-        {
-            #if     NFC_DEBUG_PRINTF
-                NFC_Print("\nNFC Tag Read Command Succeeded");
-            #endif
-        }
-
-        if(NFC_Error == true)   NFC_Sensor_Test();
-        else
-        {
-            #if     NFC_DEBUG_PRINTF
-                NFC_Print("\nNFC Tag Read Command Sent");
-            #endif
-        }
-
-        vTaskDelay(NFC_Polling_Timems);
-    }
-#else
-
-    /*
-     * Normal Operation (Parameters and Returns indicate communication with Central Task)
-     *
-     * This Task does not require any parameter to get from central task through IPC
-     * since this is the first step in the verification, and this task should always be running
-     *
-     * This Task will have have 1 array of 4 bytes length
-     * that should be reported back to the central task through IPC
-     * It will also report back the current state of the NFC Module
-     *
-     * Param_1: Null
-     *
-     * Return_1: uint8_t NFC_Tag_ID_Array[4]
-     *          (this will contain the 4 ID bytes of the NFC tag presented at the Module)
-     *
-     * Return_2: bool NFC_Error
-     *           (false: Online, true: OFfline - error present)
-     *
-     */
-
-    while(1)
-    {
-        if(NFC_Read_Tag_ID() == true)
-        {
-            NFC_Error = true;
-            #if     (NFC_Retry_Mode == NFC_Limited)
-                NFC_Retries = NFC_Max_Retries;
-            #endif
-            #if     NFC_DEBUG_PRINTF
-                NFC_Print("\nNFC Tag Read Command Failed");
-            #endif
-        }
-        else
-        {
-            #if     NFC_DEBUG_PRINTF
-                NFC_Print("\nNFC Tag Read Command Succeeded");
-            #endif
-        }
-
-        if(NFC_Error == true)   NFC_Sensor_Test();
-        else
-        {
-            #if     NFC_DEBUG_PRINTF
-                NFC_Print("\nNFC Tag Read Command Sent");
-            #endif
-        }
-
-        vTaskDelay(NFC_Polling_Timems);
-    }
-#endif
 }
