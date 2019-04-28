@@ -69,6 +69,9 @@ void LoadCellTask(void *pvParameters)
 
     LC_Error = false;
 
+    LC_Rx.LC_Poll = false;
+    LC_Rx.LC_Poll = true;
+
     for(i = 0; i < LC_MaxSamples; i ++)     LC_Tx.LC_SamplesArraymv[i] = 0;
 
     static char tp[50];
@@ -314,6 +317,7 @@ void LC_DriverInit(void)
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOM);
     GPIOPinTypeGPIOOutput(GPIO_PORTM_BASE, GPIO_PIN_4); //clk
     GPIOPinTypeGPIOInput(GPIO_PORTM_BASE, GPIO_PIN_5); //data
+    GPIOPadConfigSet(GPIO_PORTM_BASE, GPIO_PIN_5, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);
 }
 
 /*

@@ -18,7 +18,7 @@
     #define Output_Print   cust_print
 #endif
 
-#define Servo_DEBUG_PRINTF        true
+#define Output_DEBUG_PRINTF        true
 
 // Standard Includes
 #include <stdlib.h>
@@ -83,6 +83,26 @@ void Buzzer_Init(void);
 void Buzzer_On(void);
 void Buzzer_Off(void);
 
+#define     SJ_Enable_Pos       0
+#define     SJ_Enable_Mask      (1 << SJ_Enable_Pos)
+
+#define     SJ_DayTime_Pos      1
+#define     SJ_DayTime_Mask     (3 << SJ_DayTime_Pos)
+#define     SJ_Morning_Time     (0 << SJ_DayTime_Pos)
+#define     SJ_Afternoon_Time   (1 << SJ_DayTime_Pos)
+#define     SJ_Evening_Time     (2 << SJ_DayTime_Pos)
+#define     SJ_Night_Time       (3 << SJ_DayTime_Pos)
+
+#define     SJ_Person_ID_Pos    3
+#define     SJ_Person_ID_Mask   (1 << SJ_Person_ID_Pos)
+#define     SJ_Person_ID_Poorn  (0 << SJ_Person_ID_Pos)
+#define     SJ_Person_ID_Khalid (1 << SJ_Person_ID_Pos)
+
+// Set up a memorable token for "Word Pause"
+#define WP 6    // 6 is 90ms pause
+
+void SJ_Init(void);
+void SJ_Select_Message(void);
 void OutputIndicatorsTask(void *pvParameters);
 
 #endif /* OUTPUTINDICATORSTASK_H_ */

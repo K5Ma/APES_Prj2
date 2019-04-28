@@ -50,8 +50,12 @@ void EPaper_Keypad_Task(void *pvParameters)
     EP_Error = false;
     EP_Update_Cmd = false;
 
-    EP_Rx.EP_Update = true;
-    strncpy(EP_Rx.Image_Name, "K1.bmp", sizeof(EP_Rx.Image_Name));
+    EP_Rx.KeyPad_Poll = false;
+//    EP_Rx.KeyPad_Poll = true;
+
+    EP_Rx.EP_Update = false;
+//    EP_Rx.EP_Update = true;
+//    strncpy(EP_Rx.Image_Name, "P1.bmp", sizeof(EP_Rx.Image_Name));
 
     #if     EP_DEBUG_PRINTF
         EP_Print("\nHandshake");
@@ -74,6 +78,7 @@ void EPaper_Keypad_Task(void *pvParameters)
     #if     EP_DEBUG_PRINTF
         EP_Print("\nStorage Set");
     #endif
+        EP_Update_Cmd = true;
         EP_Send_Command(EP_CMD_Storage_Set, EP_Storage_Set_Type);
         if(EP_Error == false)
         {
@@ -90,6 +95,7 @@ void EPaper_Keypad_Task(void *pvParameters)
                 EP_Print("\nStorage Set Failed");
             #endif
         }
+        EP_Update_Cmd = false;
 
     static uint8_t i;
     static char tp[50];
@@ -161,6 +167,10 @@ void EPaper_Keypad_Task(void *pvParameters)
             KeyPad_Counter = 0;
             KeyPad_Pos = 0;
 
+            #if KeyPad_DEBUG_PRINTF
+                KeyPad_Print("\nCode Scanning Started");
+            #endif
+
             while(1)
             {
                 for(i = 0; i < KeyPad_Rows; i ++)
@@ -196,7 +206,7 @@ void EPaper_Keypad_Task(void *pvParameters)
                 {
                     KeyPad_Error = true;
                     #if KeyPad_DEBUG_PRINTF
-                        KeyPad_Print("\nTimed Out");
+                        KeyPad_Print("\nKeypad Timed Out");
                     #endif
                     //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send KE Failure LOG to BB
                     break;
@@ -547,6 +557,11 @@ void KeyPad_Init(void)
     GPIOPinTypeGPIOInput(GPIO_PORTH_BASE, GPIO_PIN_1);
     GPIOPinTypeGPIOInput(GPIO_PORTK_BASE, GPIO_PIN_6);
     GPIOPinTypeGPIOInput(GPIO_PORTK_BASE, GPIO_PIN_7);
+
+    GPIOPadConfigSet(GPIO_PORTH_BASE, GPIO_PIN_0, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPD);
+    GPIOPadConfigSet(GPIO_PORTH_BASE, GPIO_PIN_1, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPD);
+    GPIOPadConfigSet(GPIO_PORTK_BASE, GPIO_PIN_6, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPD);
+    GPIOPadConfigSet(GPIO_PORTK_BASE, GPIO_PIN_7, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPD);
 }
 
 /*
@@ -685,7 +700,7 @@ bool KeyPad_ScanCode(uint8_t row)
         return true;
     }
 
-    vTaskDelay(KeyPad_Polling_Timems / 4);
+    vTaskDelay(KeyPad_Polling_Timems);
     KeyPad_Counter += 1;
 
     return false;

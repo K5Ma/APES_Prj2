@@ -19,31 +19,59 @@ typedef struct{
 
 OI_B2T_Struct OI_Rx;
 
+extern bool Temperature_Alert, Humidity_Alert, Gas_Alert, Lux_Alert, PIR_Alert;
+
+//>>>>>>>>>>>>>>> Share Servo_Open among Tasks
+
 bool Servo_Open, Buzzer_Flag;
+
+uint8_t SJ_Data;
+
+const uint8_t SJ_Welcome[] = {147, 159, 194, 134, 140, WP, WP, WP, WP, WP};
+const uint8_t SJ_And[] = {8, 132, 8, 141, 177, WP, WP};
+const uint8_t SJ_Have[] = {183, 8, 132, 166, WP, WP, WP};
+const uint8_t SJ_A[] = {154, 128, WP, WP, WP};
+
+const uint8_t SJ_Good[] = {8, 179, 138, 138, 177, WP, WP};
+
+const uint8_t SJ_Morning[] =  {140, 7, 137, 7, 153, 141, 129, 143, WP, WP, WP};
+const uint8_t SJ_Afternoon[] = {132, 186, 7, 191, 7, 151, 7, 141, 139, 8, 141, WP, WP, WP};
+const uint8_t SJ_Evening[] = {8, 128, 166, 130, 141, 129, 143, WP, WP, WP};
+const uint8_t SJ_Night[] = {140, 7, 135, 155, 191, WP, WP, WP};
+
+const uint8_t SJ_Poorn[] = {199, 7, 137, 153, 141, WP};
+const uint8_t SJ_Khalid[] = {8, 194, 8, 183, 8, 145, 128, 174, WP};
 
 void OutputIndicatorsTask(void *pvParameters)
 {
     Buzzer_Init();
     Servo_PWM_Init();
+    SJ_Init();
 
     Buzzer_Flag = false;
+//    Buzzer_Flag = true;
+
     Servo_Open = false;
+    SJ_Data = 0;
+
+//    OI_Rx.OI_Data = 0x01;
+
+//    SJ_Data |= SJ_Enable_Mask;
+//    SJ_Data |= SJ_Night_Time;
+//    SJ_Data |= SJ_Person_ID_Khalid;
 
     while(1)
     {
-        //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Receive OI_Rx structure from BBComm Task with Maximum Timeout
+        //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Receive OI_Rx structure from BBComm Task with 100ms Timeout
 
+        //>>> Drive Speakjet Here
+
+        //enter critical
         Servo_Open = ((OI_Rx.OI_Data & SV_Enable_Mask) >> SV_Enable_Pos);
-//        Buzzer_Flag = ((OI_Rx.OI_Data & BZ_Enable_Mask) >> BZ_Enable_Pos);
-
-//        if(Buzzer_Flag == true)
-//        {
-//            Buzzer_On();
-//        }
-//        else
-//        {
-//            Buzzer_Off();
-//        }
+//        SJ_Data = OI_Rx.OI_Data;
+        SJ_Select_Message();
+        SJ_Data = 0;
+        //exit critical
 
         if(Servo_Open == true)
         {
@@ -51,6 +79,37 @@ void OutputIndicatorsTask(void *pvParameters)
             vTaskDelay(Servo_Door_Open_Timeoutms);
             Servo_Door_Close();
             Servo_Open = false;
+            OI_Rx.OI_Data = 0;
+        }
+
+        //>>>>> Read shared variables (critically) from BME, Lux, Gas, and PIR
+
+        //enter critical
+        if((Temperature_Alert == true) || (Humidity_Alert == true) || (Gas_Alert == true) || (Lux_Alert == true) || (PIR_Alert == true))
+        {
+            #if     Output_DEBUG_PRINTF
+                Output_Print("\nHigh Alert Detected...");
+            #endif
+            if((Temperature_Alert == true) || (Humidity_Alert == true) || (Gas_Alert == true))      Servo_Door_Open();
+            Buzzer_Flag = true;
+        }
+        else
+        {
+            #if     Output_DEBUG_PRINTF
+                Output_Print("\nNo Alert");
+            #endif
+            Buzzer_Flag = false;
+            Servo_Door_Close();
+        }
+        //exit critical
+
+        if(Buzzer_Flag == true)
+        {
+            Buzzer_On();
+        }
+        else
+        {
+            Buzzer_Off();
         }
     }
 
@@ -68,7 +127,7 @@ void Buzzer_Init(void)
     PWMGenPeriodSet(PWM0_BASE, PWM_GEN_1, 2500); //750hz
     PWMPulseWidthSet(PWM0_BASE, PWM_OUT_2, 1250);
     PWMOutputState(PWM0_BASE, PWM_OUT_2_BIT, true);
-    PWMGenEnable(PWM0_BASE, PWM_GEN_1);
+//    PWMGenEnable(PWM0_BASE, PWM_GEN_1);
 }
 
 void Buzzer_On(void)
@@ -78,19 +137,19 @@ void Buzzer_On(void)
     static uint32_t clocks;
     while(1)
     {
-        for(i = 0; i < 50; i ++)
+        for(i = 0; i < 40; i ++)
         {
             clocks = (1875000 / ((i * 50) + 50));
             PWMGenPeriodSet(PWM0_BASE, PWM_GEN_1, clocks);
             PWMPulseWidthSet(PWM0_BASE, PWM_OUT_2, (clocks / 2));
-            vTaskDelay(200);
+            vTaskDelay(50);
         }
-        for(i = 49; i >= 0; i --)
+        for(i = 39; i >= 0; i --)
         {
             clocks = (1875000 / ((i * 50) + 50));
             PWMGenPeriodSet(PWM0_BASE, PWM_GEN_1, clocks);
             PWMPulseWidthSet(PWM0_BASE, PWM_OUT_2, (clocks / 2));
-            vTaskDelay(200);
+            vTaskDelay(50);
         }
     }
 }
@@ -120,7 +179,7 @@ void Servo_PWM_Init(void)
     PWMGenPeriodSet(PWM0_BASE, PWM_GEN_0, Servo_PWM_Cycles);
     PWMPulseWidthSet(PWM0_BASE, PWM_OUT_0, Servo_Close_Position);
     PWMOutputState(PWM0_BASE, PWM_OUT_0_BIT, true);
-    PWMGenEnable(PWM0_BASE, PWM_GEN_0);
+//    PWMGenEnable(PWM0_BASE, PWM_GEN_0);
 }
 
 /*
@@ -134,8 +193,9 @@ void Servo_PWM_Init(void)
 void Servo_Door_Open(void)
 {
     PWMPulseWidthSet(PWM0_BASE, PWM_OUT_0, Servo_Open_Position);
-    #if     Servo_DEBUG_PRINTF
-        Servo_Print("\nDoor Opened");
+    PWMGenEnable(PWM0_BASE, PWM_GEN_0);
+    #if     Output_DEBUG_PRINTF
+        Output_Print("\nDoor Opened");
     #endif
 }
 
@@ -150,9 +210,11 @@ void Servo_Door_Open(void)
 void Servo_Door_Close(void)
 {
     PWMPulseWidthSet(PWM0_BASE, PWM_OUT_0, Servo_Close_Position);
-    #if     Servo_DEBUG_PRINTF
-        Servo_Print("\nDoor Closed");
+    #if     Output_DEBUG_PRINTF
+        Output_Print("\nDoor Closed");
     #endif
+    vTaskDelay(1000);
+    PWMGenDisable(PWM0_BASE, PWM_GEN_0);
 }
 
 /*
@@ -165,8 +227,8 @@ void Servo_Door_Close(void)
 void ServoTask(void *pvParameters)
 {
     Servo_PWM_Init();
-    #if     Servo_DEBUG_PRINTF
-        Servo_Print("\nServo PWM Init Done");
+    #if     Output_DEBUG_PRINTF
+        Output_Print("\nServo PWM Init Done");
     #endif
 
     /*
@@ -196,7 +258,76 @@ void ServoTask(void *pvParameters)
     }
 }
 
+void SJ_Init(void)
+{
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOP);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_UART6);
 
+    GPIOPinConfigure(GPIO_PP0_U6RX);
+    GPIOPinConfigure(GPIO_PP1_U6TX);
+    GPIOPinTypeUART(GPIO_PORTP_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+
+    UARTConfigSetExpClk(UART6_BASE, SYSTEM_CLOCK, 9600,
+                            (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE |
+                             UART_CONFIG_PAR_NONE));
+
+    UARTCharPut(UART6_BASE, 20); //volume set command
+    UARTCharPut(UART6_BASE, 127); //volume level
+    UARTCharPut(UART6_BASE, 21); //speed set command
+    UARTCharPut(UART6_BASE, 114); //speed level
+}
+
+void SJ_Select_Message(void)
+{
+    static uint8_t i, sw_var;
+
+    if((SJ_Data & SJ_Enable_Mask) == true)
+    {
+        for (i = 0; i < sizeof(SJ_Welcome); i ++)    UARTCharPut(UART6_BASE, SJ_Welcome[i]);
+        for (i = 0; i < sizeof(SJ_And); i ++)        UARTCharPut(UART6_BASE, SJ_And[i]);
+        for (i = 0; i < sizeof(SJ_Have); i ++)       UARTCharPut(UART6_BASE, SJ_Have[i]);
+        for (i = 0; i < sizeof(SJ_A); i ++)       UARTCharPut(UART6_BASE, SJ_A[i]);
+        for (i = 0; i < sizeof(SJ_Good); i ++)       UARTCharPut(UART6_BASE, SJ_Good[i]);
+
+        sw_var = SJ_Data & SJ_DayTime_Mask;
+        switch(sw_var)
+        {
+            case    SJ_Morning_Time:
+                cust_print("\nMorning");
+                for (i = 0; i < sizeof(SJ_Morning); i ++)       UARTCharPut(UART6_BASE, SJ_Morning[i]);
+                break;
+            case    SJ_Afternoon_Time:
+                cust_print("\nAfternoon");
+                for (i = 0; i < sizeof(SJ_Afternoon); i ++)       UARTCharPut(UART6_BASE, SJ_Afternoon[i]);
+                break;
+            case    SJ_Evening_Time:
+                cust_print("\nEvening");
+                for (i = 0; i < sizeof(SJ_Evening); i ++)       UARTCharPut(UART6_BASE, SJ_Evening[i]);
+                break;
+            case    SJ_Night_Time:
+                cust_print("\nNight");
+                for (i = 0; i < sizeof(SJ_Night); i ++)       UARTCharPut(UART6_BASE, SJ_Night[i]);
+                break;
+            default:
+                break;
+        }
+
+        sw_var = SJ_Data & SJ_Person_ID_Mask;
+        switch(sw_var)
+        {
+            case    SJ_Person_ID_Poorn:
+                cust_print(" Poorn\n");
+                for (i = 0; i < sizeof(SJ_Poorn); i ++)       UARTCharPut(UART6_BASE, SJ_Poorn[i]);
+                break;
+            case    SJ_Person_ID_Khalid:
+                cust_print(" Khalid\n");
+                for (i = 0; i < sizeof(SJ_Khalid); i ++)       UARTCharPut(UART6_BASE, SJ_Khalid[i]);
+                break;
+            default:
+                break;
+        }
+    }
+}
 
 
 

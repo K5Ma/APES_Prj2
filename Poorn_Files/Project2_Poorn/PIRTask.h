@@ -15,7 +15,7 @@
 #ifndef PIRTASK_H_
 #define PIRTASK_H_
 
-#define PIR_Polling_Timems          500
+#define PIR_Polling_Timems          1500
 
 #define PIR_Host_Unknown           false
 

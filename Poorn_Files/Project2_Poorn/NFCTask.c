@@ -212,6 +212,7 @@ void NFCTask(void *pvParameters)
                 #if     NFC_DEBUG_PRINTF
                     NFC_Print("\nSending NFC Tag to Control Node");
                 #endif
+                vTaskDelay(NFC_Wait_Timems);
             }
         }
     }
@@ -265,7 +266,7 @@ uint8_t NFC_UART_Rx(void)
             {
                 timeout = 0;
                 #if     NFC_DEBUG_PRINTF
-                    NFC_Print("\nChecking NFC Module Status...");
+                    NFC_Print("\nChecking NFC Module State...");
                 #endif
                 NFC_Tag_Mode = false;
                 return 0;
@@ -279,7 +280,7 @@ uint8_t NFC_UART_Rx(void)
             {
                 timeout = 0;
                 #if     NFC_DEBUG_PRINTF
-                    NFC_Print("\nStartup Failed...");
+                    NFC_Print("\nNFC Module is Offline");
                 #endif
                 NFC_Startup_Mode = false;
                 return 0;
@@ -370,9 +371,9 @@ void NFC_Sensor_Test(void)
             #if     (NFC_Retry_Mode == NFC_Limited)
                 NFC_Retries = NFC_Max_Retries;
             #endif
-            #if     NFC_DEBUG_PRINTF
-                NFC_Print("\nNFC Module is Offline");
-            #endif
+//            #if     NFC_DEBUG_PRINTF
+//                NFC_Print("\nNFC Module is Offline");
+//            #endif
         }
         else
         {
@@ -435,7 +436,6 @@ bool NFC_Read_Tag_ID(void)
             snprintf(tp, sizeof(tp), "\nTag ID: %02X:%02X:%02X:%02X", NFC_Tx.NFC_Tag_ID_Array[0], NFC_Tx.NFC_Tag_ID_Array[1], NFC_Tx.NFC_Tag_ID_Array[2], NFC_Tx.NFC_Tag_ID_Array[3]);
             NFC_Print(tp);
         #endif
-//        vTaskDelay(NFC_Wait_Timems);
     }
     else    for(i = 0; i < NFC_Tag_ID_Length; i ++)    NFC_Tx.NFC_Tag_ID_Array[i] = 0;
 

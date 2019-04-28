@@ -36,7 +36,7 @@
 #endif
 
 #define NFC_Polling_Timems       1000
-#define NFC_Wait_Timems          1000
+#define NFC_Wait_Timems          5000
 
 #define NFC_Online_Test_Timems   1000
 

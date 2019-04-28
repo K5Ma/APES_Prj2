@@ -32,8 +32,61 @@
 #include "task.h"
 #include "queue.h"
 
+extern bool Servo_Open;
+
+bool PIR_Alert;
+
 // Variables that will be shared between functions
-bool PIR_State, PIR_Disable;
+bool PIR_State;
+
+/*
+ *
+ * Callback Function for PIR Task
+ *
+ * Return: Null
+ *
+ */
+
+/*
+ * Normal Operation (Parameters and Returns indicate communication with Central Task)
+ *
+ * This Task requires 1 parameter from Central Task through IPC
+ *
+ * This Task will return 1 boolen value representing current state of the sensor
+ *
+ * Param_1: bool Servo_Open
+ *          (false: keep polling, true: stop the sensor for 60 seconds)
+ *
+ * Return_1: bool PIR_State
+ *          (false: Door is Closed, true: Door is opened)
+ *
+ */
+void PIRTask(void *pvParameters)
+{
+    PIR_Init();
+
+    PIR_Alert = false;
+
+    while(1)
+    {
+        if(Servo_Open == false)
+        {
+            PIR_Read();
+            if(PIR_State == true)
+            {
+                PIR_Alert = true;
+                //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send Security Breach Alert LOG to BB
+            }
+            else
+            {
+                PIR_Alert = false;
+                //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send Door Secured LOG to BB
+            }
+        }
+         vTaskDelay(PIR_Polling_Timems);
+    }
+}
+
 
 /*
  * Function to setup GPIO pin for PIR Sensor
@@ -76,53 +129,5 @@ void PIR_Read(void)
         #if     PIR_DEBUG_PRINTF
             PIR_Print("\nDoor Opened");
         #endif
-    }
-}
-
-/*
- *
- * Callback Function for PIR Task
- *
- * Return: Null
- *
- */
-
-/*
- * Normal Operation (Parameters and Returns indicate communication with Central Task)
- *
- * This Task requires 1 parameter from Central Task through IPC
- *
- * This Task will return 1 boolen value representing current state of the sensor
- *
- * Param_1: bool PIR_Disable
- *          (false: keep polling, true: stop the sensor for 60 seconds)
- *
- * Return_1: bool PIR_State
- *          (false: Door is Closed, true: Door is opened)
- *
- */
-void PIRTask(void *pvParameters)
-{
-    PIR_Init();
-
-    #if     PIR_DEBUG_PRINTF
-        PIR_Print("\nPIR Init Done");
-    #endif
-
-    #if PIR_INDIVIDUAL_TESTING
-        PIR_Disable = false;
-    #endif
-
-    while(1)
-    {
-        if(PIR_Disable == true)
-        {
-            vTaskDelay(PIR_Stay_Off_Timeoutms);
-            PIR_Disable = false;
-        }
-
-        if(PIR_Disable == false)    PIR_Read();
-
-         vTaskDelay(PIR_Polling_Timems);
     }
 }

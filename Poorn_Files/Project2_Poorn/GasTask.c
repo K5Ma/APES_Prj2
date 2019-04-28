@@ -38,10 +38,105 @@
 #include "task.h"
 #include "queue.h"
 
+// Share this following variable between tasks
+bool Gas_Alert;
+
 // Variables that will be shared between functions
 bool Gas_Error;
 uint16_t Gas_Level;
 uint8_t Gas_Retries;
+
+/*
+ *
+ * Callback Function for Gas Task
+ *
+ * Return: Null
+ *
+ */
+
+/*
+ * Normal Operation (Parameters and Returns indicate communication with Central Task)
+ *
+ * This Task doesn't require anything from Central Task through IPC
+ * As this is a safety sensor - which should be always ON
+ *
+ * This Task will return 1 integer value containing Gas Level
+ * It will also report back the current sensor state
+ *
+ * Param_1: Null
+ *
+ * Return_1: uint16_t Gas_Level
+ *          (the current Gas level of the surrounding area)
+ *
+ * Return_2: bool Gas_Error
+ *           (false: Online, true: OFfline - error present)
+ *
+ */
+void GasTask(void *pvParameters)
+{
+    Gas_Alert = false;
+
+    Gas_ADC_Init();
+    Gas_Read();
+
+    if(Gas_Error == false)
+    {
+        //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send Gas BIST Success LOG to BB
+        #if     Gas_DEBUG_PRINTF
+            Gas_Print("\nGas Sensor Setup Succeeded");
+            Gas_Print("\nStarting Gas Normal Operation");
+        #endif
+    }
+    else
+    {
+        //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send Gas BIST Failure LOG to BB
+        #if     Gas_DEBUG_PRINTF
+            Gas_Print("\nGas Sensor Setup Failed");
+        #endif
+    }
+
+    while(1)
+    {
+        if(Gas_Error == false)
+        {
+            //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send Gas Online LOG to BB
+            #if     Gas_DEBUG_PRINTF
+                Gas_Print("\nGas Sensor is Online");
+            #endif
+            Gas_Read();
+            if(Gas_Error == false)
+            {
+                if(Gas_Level > Gas_High_Threshold_Level)
+                {
+                    Gas_Alert = true;
+                    //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send Gas Too High Alert (with value) LOG to BB
+                }
+                else
+                {
+                    Gas_Alert = false;
+                    //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send Gas Normal (with value) LOG to BB
+                }
+            }
+        }
+
+        if(Gas_Error == true)
+        {
+            //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send Gas Failure LOG to BB
+            #if     (Gas_Retry_Mode == Gas_Limited)
+                if(Gas_Retries != 0)
+                {
+                    Gas_Retries -= 1;
+            #endif
+                    #if     Gas_DEBUG_PRINTF
+                        Gas_Print("\nGas Sensor is Offline... Retrying...");
+                    #endif
+            #if     (Gas_Retry_Mode == Gas_Limited)
+                }
+            #endif
+        }
+        vTaskDelay(Gas_Polling_Timems);
+    }
+}
 
 /*
  * Function to setup ADC0 peripheral for Gas Sensor
@@ -118,64 +213,6 @@ void Gas_Read(void)
                 Gas_Print("\nGas Sensor is Back Online");
             #endif
         }
-    }
-}
-
-/*
- *
- * Callback Function for Gas Task
- *
- * Return: Null
- *
- */
-
-/*
- * Normal Operation (Parameters and Returns indicate communication with Central Task)
- *
- * This Task doesn't require anything from Central Task through IPC
- * As this is a safety sensor - which should be always ON
- *
- * This Task will return 1 integer value containing Gas Level
- * It will also report back the current sensor state
- *
- * Param_1: Null
- *
- * Return_1: uint16_t Gas_Level
- *          (the current Gas level of the surrounding area)
- *
- * Return_2: bool Gas_Error
- *           (false: Online, true: OFfline - error present)
- *
- */
-void GasTask(void *pvParameters)
-{
-
-    Gas_ADC_Init();
-
-    #if     Gas_DEBUG_PRINTF
-        Gas_Print("\nADC Setup Done");
-    #endif
-
-    while(1)
-    {
-        if(Gas_Error == false)      Gas_Read();
-
-        if(Gas_Error == true)
-        {
-            #if     (Gas_Retry_Mode == Gas_Limited)
-                if(Gas_Retries != 0)
-                {
-                    Gas_Retries -= 1;
-            #endif
-                    #if     Gas_DEBUG_PRINTF
-                        Gas_Print("\nGas Sensor is Offline... Retrying...");
-                    #endif
-                    vTaskDelay(Gas_Offline_Wait_Timems);
-            #if     (Gas_Retry_Mode == Gas_Limited)
-                }
-            #endif
-        }
-        vTaskDelay(Gas_Polling_Timems);
     }
 }
 

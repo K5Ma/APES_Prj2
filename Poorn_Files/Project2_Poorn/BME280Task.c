@@ -37,6 +37,10 @@
 #include "task.h"
 #include "queue.h"
 
+//>>>>>>>>>>>>>>> Share following 2 variables among Tasks
+
+bool Temperature_Alert, Humidity_Alert;
+
 // Variables that will be shared between functions
 typedef struct
 {
@@ -70,6 +74,207 @@ bool BME280_RunStatus, BME280_Error;
 uint32_t BME280_Data[8];
 int32_t BME280_TempFine;
 uint8_t BME280_Retries;
+
+/*
+ *
+ * Callback Function for BME280 Task
+ *
+ * Return: Null
+ *
+ */
+void BME280Task(void *pvParameters)
+{
+    BME280_RunStatus = false;
+    BME280_Error = false;
+
+    Temperature_Alert = false;
+    Humidity_Alert = false;
+
+    static char tp[200];
+
+    BME280_SPISetup();
+    BME280_Error = BME280_SensorSetup();
+
+    if(BME280_Error == true)
+    {
+        //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send BME280 BIST Failure LOG to BB
+        #if     (BME280_Retry_Mode == BME280_Limited)
+            BME280_Retries = BME280_Max_Retries;
+        #endif
+        #if     BME280_DEBUG_PRINTF
+            BME280_Print("\nBME280 Setup Failed");
+        #endif
+    }
+    else
+    {
+        //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send BME280 BIST Success LOG to BB
+        #if     BME280_DEBUG_PRINTF
+            BME280_Print("\nBME280 Setup Succeeded");
+            BME280_Print("\nStarting BME280 Normal Operation");
+        #endif
+    }
+
+    static float temperature, humidity;
+//    static float ref_pressure = 101325.0;
+
+//    static float pressure, height;
+
+    BME280_RunStatus = true;
+
+#if     BME280_INDIVIDUAL_TESTING
+
+    /*
+     * This portion just tests the BME280 Sensor individually
+     * It doesn't rely on anything that is not covered
+     * or provided by its own header and source files
+     *
+     * This mode is only for raw testing, and may not
+     * include any of the error checking feature(s)
+     */
+
+    while(1)
+    {
+        BME280_ReadAllDataReg();
+
+        BME280_GetTemp(&temperature);
+
+        BME280_GetPressure(&pressure);
+
+        height = ((-44330.77)*(pow((pressure/ref_pressure), 0.190263) - 1.0)) * 3.28084;
+
+        BME280_GetHum(&humidity);
+
+        snprintf(tp, sizeof(tp), "\nTemp. - %.2fC(%.2fF) Atm. Pres. - %.2fPa Alt. - %.2fFt R.H. - %.2f%", temperature,
+                 ((temperature * 1.8) + 32), pressure, height, humidity);
+        BME280_Print(tp);
+
+        vTaskDelay(BME280_Polling_Timems);
+    }
+#else
+
+    /*
+     * Normal Operation (Parameters and Returns indicate communication with Central Task)
+     *
+     * This Task does not require any parameter to get from central task through IPC
+     * since this is a fail-safe mechanism, and this task should always be running
+     *
+     * This Task will have 2 variables - BME280_milliTemperatureCelcius and BME280_milliHumidityPercent
+     * both in uint16_t that should be reported back to the central task through IPC
+     * It will also report back the current state of the BME280 Sensor
+     *
+     * Param_1: Null
+     *
+     * Return_1: int16_t BME280_milliTemperatureCelcius
+     *          (To save size, I have converted float to integer
+     *           and while doing that - multiplied float with 1000
+     *           in order to get the required accuracy)
+     *
+     * Return_2: uint16_t BME280_milliHumidityPercent
+     *          (To save size, I have converted float to integer
+     *           and while doing that - multiplied float with 1000
+     *           in order to get the required accuracy)
+     *
+     * Return_3: bool BME280_Error
+     *           (false: Online, true: OFfline - error present)
+     *
+     */
+
+    while(1)
+    {
+        vTaskDelay(BME280_Polling_Timems);
+
+        if(BME280_Error == false)
+        {
+            //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send BME280 Online LOG to BB
+            BME280_TestSensor();
+            #if     BME280_DEBUG_PRINTF
+                    BME280_Print("\nChecking BME280 Status...");
+                    if(BME280_Error == false)   BME280_Print("\nBME280 is Online");
+                    else    BME280_Print("\nBME280 is Offline");
+            #endif
+        }
+        else
+        {
+            //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send BME280 Failure LOG to BB
+            #if     (BME280_Retry_Mode == BME280_Limited)
+                if(BME280_Retries != 0x00)
+                {
+                    BME280_Retries -= 1;
+            #endif
+                    BME280_SPISetup();
+                    BME280_Error = BME280_SensorSetup();
+            #if     (BME280_Retry_Mode == BME280_Limited)
+                }
+            #endif
+        }
+
+        // Note: Poll_BME280 flag shouldn't be cleared automatically.
+        if(BME280_Error == false)
+        {
+            BME280_ReadAllDataReg();
+            BME280_GetTemp(&temperature);
+            BME280_GetHum(&humidity);
+
+            if(BME280_Error == false)
+            {
+                if(temperature > BME280_Temp_High_Threshold)
+                {
+                    #if     BME280_DEBUG_PRINTF
+                        BME280_Print("\nTemperature Too High... Alert!");
+                    #endif
+                    Temperature_Alert = true;
+                    //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send Temp Too High Alert (with value) LOG to BB
+                }
+                else if(temperature < BME280_Temp_Low_Threshold)
+                {
+                    #if     BME280_DEBUG_PRINTF
+                        BME280_Print("\nTemperature Too Low... Alert!");
+                    #endif
+                    Temperature_Alert = true;
+                    //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send Temp Too Low Alert (with value) LOG to BB
+                }
+                else
+                {
+                    #if     BME280_DEBUG_PRINTF
+                        BME280_Print("\nTemperature is Normal");
+                    #endif
+                    Temperature_Alert = false;
+                    //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send Temp Normal (with value) LOG to BB
+                }
+
+                if(humidity > BME280_Humidity_High_Threshold)
+                {
+                    #if     BME280_DEBUG_PRINTF
+                        BME280_Print("\nHumidity Too High... Alert!");
+                    #endif
+                    Humidity_Alert = true;
+                    //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send Humidity Too High Alert (with value) LOG to BB
+                }
+                else
+                {
+                    #if     BME280_DEBUG_PRINTF
+                        BME280_Print("\nHumidity is Normal");
+                    #endif
+                    Humidity_Alert = false;
+                    //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send Humidity Normal (with value) LOG to BB
+                }
+
+                #if     BME280_DEBUG_PRINTF
+                    snprintf(tp, sizeof(tp), "\nTemp. - %.2fC(%.2fF) R.H. - %.2f%", temperature,
+                             ((temperature * 1.8) + 32), humidity);
+                    BME280_Print(tp);
+                #endif
+            }
+//            else
+//            {
+//                #if     BME280_DEBUG_PRINTF
+//                    BME280_Print("\nBME280 is Offline");
+//                #endif
+//            }
+        }
+    }
+#endif
+}
 
 /*
  * Function to setup SPI bus for BME280
@@ -569,168 +774,6 @@ void BME280_TestSensor(void)
             BME280_Print("\nBME280 is Offline");
         #endif
     }
-}
-
-/*
- *
- * Callback Function for BME280 Task
- *
- * Return: Null
- *
- */
-void BME280Task(void *pvParameters)
-{
-    BME280_RunStatus = false;
-    BME280_Error = false;
-
-    static char tp[200];
-
-    BME280_SPISetup();
-    BME280_Error = BME280_SensorSetup();
-
-    if(BME280_Error == true)
-    {
-        #if     (BME280_Retry_Mode == BME280_Limited)
-            BME280_Retries = BME280_Max_Retries;
-        #endif
-        #if     BME280_DEBUG_PRINTF
-            BME280_Print("\nBME280 Setup Failed");
-        #endif
-    }
-    else
-    {
-        #if     BME280_DEBUG_PRINTF
-            BME280_Print("\nBME280 Setup Succeeded");
-        #endif
-    }
-
-    static float temperature, pressure, height, humidity;
-    static float ref_pressure = 101325.0;
-
-    BME280_RunStatus = true;
-
-#if     BME280_INDIVIDUAL_TESTING
-
-    /*
-     * This portion just tests the BME280 Sensor individually
-     * It doesn't rely on anything that is not covered
-     * or provided by its own header and source files
-     *
-     * This mode is only for raw testing, and may not
-     * include any of the error checking feature(s)
-     */
-
-    while(1)
-    {
-        BME280_ReadAllDataReg();
-
-        BME280_GetTemp(&temperature);
-
-        BME280_GetPressure(&pressure);
-
-        height = ((-44330.77)*(pow((pressure/ref_pressure), 0.190263) - 1.0)) * 3.28084;
-
-        BME280_GetHum(&humidity);
-
-        snprintf(tp, sizeof(tp), "\nTemp. - %.2fC(%.2fF) Atm. Pres. - %.2fPa Alt. - %.2fFt R.H. - %.2f%", temperature,
-                 ((temperature * 1.8) + 32), pressure, height, humidity);
-        BME280_Print(tp);
-
-        vTaskDelay(BME280_Polling_Timems);
-    }
-#else
-
-    /*
-     * Normal Operation (Parameters and Returns indicate communication with Central Task)
-     *
-     * This Task does not require any parameter to get from central task through IPC
-     * since this is a fail-safe mechanism, and this task should always be running
-     *
-     * This Task will have 2 variables - BME280_milliTemperatureCelcius and BME280_milliHumidityPercent
-     * both in uint16_t that should be reported back to the central task through IPC
-     * It will also report back the current state of the BME280 Sensor
-     *
-     * Param_1: Null
-     *
-     * Return_1: int16_t BME280_milliTemperatureCelcius
-     *          (To save size, I have converted float to integer
-     *           and while doing that - multiplied float with 1000
-     *           in order to get the required accuracy)
-     *
-     * Return_2: uint16_t BME280_milliHumidityPercent
-     *          (To save size, I have converted float to integer
-     *           and while doing that - multiplied float with 1000
-     *           in order to get the required accuracy)
-     *
-     * Return_3: bool BME280_Error
-     *           (false: Online, true: OFfline - error present)
-     *
-     */
-
-    static uint16_t BME280_milliTemperatureCelcius, BME280_milliHumidityPercent;
-    static uint8_t idletimecount;
-
-    idletimecount = 0;
-
-    while(1)
-    {
-
-        if(idletimecount >= (BME280_Online_Test_Timems / BME280_Polling_Timems))
-        {
-            BME280_TestSensor();
-            #if     BME280_DEBUG_PRINTF
-                    BME280_Print("\nChecking BME280 Status...");
-                    if(LC_Error == false)   BME280_Print("\nBME280 is Online");
-                    else    BME280_Print("\nBME280 is Offline");
-            #endif
-            idletimecount = 0;
-        }
-
-        if(BME280_Error == true)
-        {
-        #if     (BME280_Retry_Mode == BME280_Limited)
-            if(BME280_Retries != 0x00)
-            {
-                BME280_Retries -= 1;
-        #endif
-                BME280_SPISetup();
-                BME280_Error = BME280_SensorSetup();
-        #if     (BME280_Retry_Mode == BME280_Limited)
-            }
-        #endif
-        }
-
-        // Note: Poll_BME280 flag shouldn't be cleared automatically.
-        if((Poll_BME280 == true) && (BME280_Error == false))
-        {
-            BME280_ReadAllDataReg();
-            BME280_GetTemp(&temperature);
-            BME280_GetHum(&humidity);
-
-            if(BME280_Error == false)
-            {
-                #if     BME280_DEBUG_PRINTF
-                    snprintf(tp, sizeof(tp), "\nTemp. - %.2fC(%.2fF) R.H. - %.2f%", temperature,
-                             ((temperature * 1.8) + 32), humidity);
-                    BME280_Print(tp);
-                #endif
-                BME280_milliTemperatureCelcius = (uint16_t)(temperature * 1000);
-                BME280_milliHumidityPercent = (uint16_t)(humidity * 1000);
-            }
-            else
-            {
-                #if     BME280_DEBUG_PRINTF
-                    BME280_Print("\nBME280 is Offline");
-                #endif
-                BME280_milliTemperatureCelcius = 0;
-                BME280_milliHumidityPercent = 0;
-            }
-        }
-
-        vTaskDelay(BME280_Polling_Timems);
-        idletimecount += 1;
-    }
-#endif
 }
 
 

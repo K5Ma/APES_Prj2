@@ -27,9 +27,7 @@
 #define BME280_Max_Retries          5
 #endif
 
-#define BME280_Polling_Timems       500
-
-#define BME280_Online_Test_Timems   (4 * BME280_Polling_Timems)
+#define BME280_Polling_Timems       2500
 
 #define BME280_Host_Unknown           false
 
@@ -39,7 +37,7 @@
     #define BME280_Print   cust_print
 #endif
 
-#define BME280_INDIVIDUAL_TESTING  true
+#define BME280_INDIVIDUAL_TESTING  false
 
 #define BME280_DEBUG_PRINTF        true
 
@@ -80,6 +78,11 @@
 #include "driverlib/ssi.h"
 
 #include "sensorlib/i2cm_drv.h"
+
+#define BME280_Temp_High_Threshold      30
+#define BME280_Temp_Low_Threshold       20
+
+#define BME280_Humidity_High_Threshold      50
 
 #define BME280_DevID        0x60
 
@@ -204,6 +207,8 @@ void BME280_ReadAllDataReg(void);
 void BME280_GetPressure(float *var_p);
 void BME280_GetTemp(float *var_t);
 void BME280_GetHum(float *var_h);
+bool BME280_SensorSetup(void);
+void BME280_TestSensor(void);
 void BME280Task(void *pvParameters);
 
 

@@ -26,7 +26,6 @@
 
 #define Lux_Polling_Timems       500
 #define Lux_Timeoutms            2000
-#define Lux_Stay_Off_Timeoutms   60000
 
 #define Lux_Host_Unknown           false
 
@@ -164,6 +163,8 @@
 #define Lux_Control_Pos                 0
 #define Lux_Control_Mask                ((Lux_Control_Power_ON) << Lux_Control_Pos)
 #define Lux_Test_Control_Power(x)       (x & Lux_Control_Mask) == Lux_Control_Power_ON ? 0 : 1
+
+#define Lux_High_Threshold_Level        10
 
 void Lux_I2C_busy_wait_blocking(void);
 void Lux_I2C_pin_config(void);

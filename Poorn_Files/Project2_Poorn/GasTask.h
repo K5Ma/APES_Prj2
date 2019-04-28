@@ -24,8 +24,7 @@
     #define Gas_Max_Retries          5
 #endif
 
-#define Gas_Polling_Timems          500
-#define Gas_Offline_Wait_Timems     2000
+#define Gas_Polling_Timems          2000
 
 #define Gas_Host_Unknown           false
 
@@ -83,6 +82,8 @@
 
 #define Gas_Offline_Maximum_Level       100
 #define Gas_Online_Minimum_Level    150
+
+#define Gas_High_Threshold_Level        1500
 
 void Gas_ADC_Init(void);
 void Gas_Read(void);

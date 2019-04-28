@@ -34,11 +34,119 @@
 #include "task.h"
 #include "queue.h"
 
+extern bool Servo_Open;
+
 // Variables that will be shared between functions
 uint8_t Lux_I2C_Data[2], Lux_Retries;
-bool Lux_Error = false, Lux_Disable;
+bool Lux_Error = false, Lux_Alert;
 float Lux_Value;
 uint16_t Lux_Level;
+
+/*
+ *
+ * Callback Function for Lux Task
+ *
+ * Return: Null
+ *
+ */
+
+/*
+ * Normal Operation (Parameters and Returns indicate communication with Central Task)
+ *
+ * This Task requires 1 parameter from Central Task through IPC
+ *
+ * This Task will return 1 integer value containing Lux Level
+ * It will also report back the current sensor state
+ *
+ * Param_1: bool Servo_Open
+ *          (false: keep polling, true: stop the sensor for 60 seconds)
+ *
+ * Return_1: uint16_t Lux_Level
+ *          (the current lux level of the surrounding area)
+ *
+ * Return_2: bool Lux_Error
+ *           (false: Online, true: OFfline - error present)
+ *
+ */
+void LuxTask(void *pvParameters)
+{
+    static char tp[50];
+    Lux_I2C_init();
+
+    #if Lux_INDIVIDUAL_TESTING
+        Servo_Open = false;
+    #endif
+
+    Lux_read();
+
+    if(Lux_Error == false)
+    {
+        //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send Lux BIST Success LOG to BB
+        #if Lux_DEBUG_PRINTF
+            Lux_Print("\nLux Sensor Setup Succeeded");
+            Lux_Print("\nStarting Lux Normal Operation");
+        #endif
+    }
+    else
+    {
+        //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send Lux BIST Failure LOG to BB
+        #if Lux_DEBUG_PRINTF
+            Lux_Print("\nLux Sensor Setup Failed");
+        #endif
+    }
+
+    while(1)
+    {
+        if(Servo_Open == false)
+        {
+            if(Lux_Error == false)
+            {
+                //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send Lux Online LOG to BB
+                Lux_read();
+                if(Lux_Error == false)
+                {
+                    if(Lux_Level > Lux_High_Threshold_Level)
+                    {
+                        Lux_Alert = true;
+                        //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send Lux Too High Alert (with value) LOG to BB
+                    }
+                    else
+                    {
+                        Lux_Alert = false;
+                        //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send Lux Normal (with value) LOG to BB
+                    }
+                    #if Lux_DEBUG_PRINTF
+                        snprintf(tp, sizeof(tp), "\nLux Level: %d", Lux_Level);
+                        Lux_Print(tp);
+                    #endif
+                }
+            }
+            else
+            {
+                //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send Gas Failure LOG to BB
+                #if     (Lux_Retry_Mode == Lux_Limited)
+                    if(Lux_Retries != 0)
+                    {
+                        Lux_Retries -= 1;
+                #endif
+                #if Lux_DEBUG_PRINTF
+                    Lux_Print("\nLux Sensor Offline... Retrying...");
+                #endif
+                        Lux_Test_Sensor();
+                        if(Lux_Error == false)
+                        {
+                            #if Lux_DEBUG_PRINTF
+                                Lux_Print("\nLux Sensor is Back Online");
+                            #endif
+                        }
+                #if     (Lux_Retry_Mode == Lux_Limited)
+                    }
+                #endif
+            }
+        }
+        vTaskDelay(Lux_Polling_Timems);
+    }
+}
 
 /*
  * Function to wait for Lux Sensor to respond on
@@ -312,84 +420,4 @@ void Lux_read(void)
         else    Lux_Value = 0;
     }
     Lux_Level = (uint16_t)Lux_Value;
-}
-
-/*
- *
- * Callback Function for Lux Task
- *
- * Return: Null
- *
- */
-
-/*
- * Normal Operation (Parameters and Returns indicate communication with Central Task)
- *
- * This Task requires 1 parameter from Central Task through IPC
- *
- * This Task will return 1 integer value containing Lux Level
- * It will also report back the current sensor state
- *
- * Param_1: bool Lux_Disable
- *          (false: keep polling, true: stop the sensor for 60 seconds)
- *
- * Return_1: uint16_t Lux_Level
- *          (the current lux level of the surrounding area)
- *
- * Return_2: bool Lux_Error
- *           (false: Online, true: OFfline - error present)
- *
- */
-void LuxTask(void *pvParameters)
-{
-    static char tp[50];
-    Lux_I2C_init();
-
-    #if Lux_INDIVIDUAL_TESTING
-        Lux_Disable = false;
-    #endif
-
-    while(1)
-    {
-        if(Lux_Disable == true)
-        {
-            vTaskDelay(Lux_Stay_Off_Timeoutms);
-            Lux_Disable = false;
-        }
-
-        if(Lux_Error == false)
-        {
-            Lux_read();
-            if(Lux_Error == false)
-            {
-            #if Lux_DEBUG_PRINTF
-                snprintf(tp, sizeof(tp), "\nLux Level: %d", Lux_Level);
-                Lux_Print(tp);
-            #endif
-            }
-        }
-
-        if(Lux_Error == true)
-        {
-            #if     (Lux_Retry_Mode == Lux_Limited)
-                if(Lux_Retries != 0)
-                {
-                    Lux_Retries -= 1;
-            #endif
-            #if Lux_DEBUG_PRINTF
-                Lux_Print("\nLux Sensor Offline... Retrying...");
-            #endif
-                    Lux_Test_Sensor();
-                    if(Lux_Error == false)
-                    {
-                        #if Lux_DEBUG_PRINTF
-                            Lux_Print("\nLux Sensor is Back Online");
-                        #endif
-                    }
-            #if     (Lux_Retry_Mode == Lux_Limited)
-                }
-            #endif
-        }
-        vTaskDelay(Lux_Polling_Timems);
-    }
 }

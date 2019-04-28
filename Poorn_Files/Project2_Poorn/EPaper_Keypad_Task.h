@@ -124,9 +124,9 @@ void EP_Draw_Circle(uint16_t EP_Circle_Center_X_Pos, uint16_t EP_Circle_Center_Y
 void EP_Set_Image_CMD(char *EP_Image_Name, uint16_t EP_Image_X_Start_Pos, uint16_t EP_Image_Y_Start_Pos);
 void EP_Display_Image(char *EP_Image_Name, uint16_t EP_Image_X_Start_Pos, uint16_t EP_Image_Y_Start_Pos);
 
-#define KeyPad_Polling_Timems       100
-#define KeyPad_Wait_Timems          1000
-#define KeyPad_Timeoutms            (1000 * KeyPad_Polling_Timems)
+#define KeyPad_Polling_Timems       25
+#define KeyPad_Wait_Timems          500
+#define KeyPad_Timeoutms            (400 * KeyPad_Polling_Timems)
 
 #define KeyPad_Host_Unknown           false
 

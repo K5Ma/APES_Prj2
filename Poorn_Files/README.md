@@ -129,4 +129,7 @@ Poorn's Readme File
 
 >>TODO (for fully functional project): Modify OutputIndicators Task, and Create a new LocalSafety Task.
 
+**********v2.1********** (4/28/2019)
+
+>*Minor Updates*
 

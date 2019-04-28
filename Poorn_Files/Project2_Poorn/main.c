@@ -53,7 +53,7 @@
 #include "LoadCellTask.h"
 #include "BME280Task.h"
 #include "NFCTask.h"
-#include "ServoTask.h"
+//#include "ServoTask.h"
 #include "SpeakJetTask.h"
 #include "OutputIndicatorsTask.h"
 //#include "KeyPadTask.h"
@@ -61,6 +61,8 @@
 #include "GasTask.h"
 #include "PIRTask.h"
 #include "EPaper_Keypad_Task.h"
+
+//#include "LocalSafetyControl.h"
 
 #include <math.h>
 
@@ -122,12 +124,12 @@ int main(void)
 
     // Stack sizes are manually fine tuned
 
-    if(xTaskCreate(NFCTask, (const portCHAR *)"NFC",
-               500, 0, 1, 0) != pdTRUE)
-    {
-        cust_print("\nNFC Task Creation Failed");
-    }
-    else        cust_print("\nNFC Task Created");
+//    if(xTaskCreate(NFCTask, (const portCHAR *)"NFC",
+//               500, 0, 1, 0) != pdTRUE)
+//    {
+//        cust_print("\nNFC Task Creation Failed");
+//    }
+//    else        cust_print("\nNFC Task Created");
 
 //    if(xTaskCreate(EPaper_Keypad_Task, (const portCHAR *)"EPaper_Keypad",
 //               500, 0, 1, 0) != pdTRUE)
@@ -143,6 +145,19 @@ int main(void)
 //    }
 //    else        cust_print("\nLoadCell Task Created");
 
+    if(xTaskCreate(OutputIndicatorsTask, (const portCHAR *)"OutputIndicators",
+               500, 0, 1, 0) != pdTRUE)
+    {
+        cust_print("\nOutputIndicators Task Creation Failed");
+    }
+    else        cust_print("\nOutputIndicators Task Created");
+
+    if(xTaskCreate(BME280Task, (const portCHAR *)"BME280",
+               500, 0, 1, 0) != pdTRUE)
+    {
+        cust_print("\nBME280 Task Creation Failed");
+    }
+    else        cust_print("\nBME280 Task Created");
 
 //    if(xTaskCreate(Log_Task, (const portCHAR *)"Log",
 //                400, 0, 1, NULL) != pdTRUE)
@@ -179,26 +194,12 @@ int main(void)
 //    }
 //    else        cust_print("\nEPaper Task Created");
 
-//    if(xTaskCreate(BME280Task, (const portCHAR *)"BME280",
-//               500, 0, 1, 0) != pdTRUE)
-//    {
-//        cust_print("\nBME280 Task Creation Failed");
-//    }
-//    else        cust_print("\nBME280 Task Created");
-
 //    if(xTaskCreate(ServoTask, (const portCHAR *)"Servo",
 //               500, 0, 1, 0) != pdTRUE)
 //    {
 //        cust_print("\nServo Task Creation Failed");
 //    }
 //    else        cust_print("\nServo Task Created");
-
-//    if(xTaskCreate(OutputIndicatorsTask, (const portCHAR *)"OutputIndicators",
-//               500, 0, 1, 0) != pdTRUE)
-//    {
-//        cust_print("\nOutputIndicators Task Creation Failed");
-//    }
-//    else        cust_print("\nOutputIndicators Task Created");
 
 //    if(xTaskCreate(SpeakJetTask, (const portCHAR *)"SpeakJet",
 //               500, 0, 1, 0) != pdTRUE)
