@@ -78,7 +78,8 @@ volatile bool POLL_RX = false;						//Flag used to know if we are currently RXin
  *
  * 9- [COMPLETED] TEST STORING AND READING FROM TEST STRUCT
  *
- * 10- [] MAYBE DYNAMICALLY ALLOCATE STRING IN Log_UART0()? FOR NOW IT IS A STATIC SIZE
+ * 10- [COMPLETED] MAYBE DYNAMICALLY ALLOCATE STRING IN Log_UART0()? FOR NOW IT IS A STATIC SIZE
+ * 				L-> DYNAMIC AVOIDS A STACK OVERFLOW ISSUE?
  *
  * 11- [] HAVE LEDs BLINK DURING SENDING FROM BB_COMM
  *
@@ -158,15 +159,15 @@ int main()
 	IntMasterEnable();
 
 
-	/* Init Logger Task */
-	if(Logger_TaskInit())
-	{
-		Log_Msg(T_Main, "CRITICAL", "Could not init Logger Task!", LOCAL_ONLY);
-	}
-	else
-	{
-		Log_Msg(T_Main, "INFO", "Logger Task init successfully!", LOCAL_ONLY);
-	}
+//	/* Init Logger Task */
+//	if(Logger_TaskInit())
+//	{
+//		Log_Msg(T_Main, "CRITICAL", "Could not init Logger Task!", LOCAL_ONLY);
+//	}
+//	else
+//	{
+//		Log_Msg(T_Main, "INFO", "Logger Task init successfully!", LOCAL_ONLY);
+//	}
 
 	/* Init BBComm Task */
 	if(BBComm_TaskInit())

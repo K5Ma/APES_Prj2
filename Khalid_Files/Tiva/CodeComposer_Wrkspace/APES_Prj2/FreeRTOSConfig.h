@@ -126,6 +126,7 @@ to exclude the API function. */
 #define INCLUDE_vTaskDelayUntil         1
 #define INCLUDE_vTaskDelay              1
 #define INCLUDE_xTaskGetHandle			1
+#define INCLUDE_uxTaskGetStackHighWaterMark    1
 
 
 /* The highest interrupt priority that can be used by any interrupt service

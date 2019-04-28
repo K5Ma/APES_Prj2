@@ -96,9 +96,9 @@ void UART_Putchar_n(uint8_t UART_Num, char* TX_String)
 	/* Error handling - Assert the given UART number is valid */
 	ASSERT( UART_Num <= 7 );
 
-	uint32_t i;
-	uint32_t Length = strlen((const char*)TX_String);
-	for(i=0; i < Length; i++)
+	uint16_t i;
+	uint16_t Length = strlen((const char*)TX_String);
+	for(i = 0; i < Length; i++)
 	{
 		UART_Putchar(UARTBase[UART_Num], TX_String[i]);
 	}

@@ -71,6 +71,9 @@ void BBComm_Task(void *pvParameters)
 	/* Init UART1 - Used to talk to the BeagleBone via Bluetooth */
 	Init_UARTx(UART1, SYSTEM_CLOCK, 9600, true);
 
+	/* Delay before next poll */
+	const TickType_t xDelay = 10 / portTICK_PERIOD_MS;
+
 	while(1)
 	{
 		/* If we need to RX something: */
@@ -130,6 +133,9 @@ void BBComm_Task(void *pvParameters)
 				UART_Putchar_n(UART1, END_CMD);                          //Send End CMD to BB
 			}
 		}
+
+		/* Delay for 10 mS */
+		vTaskDelay(xDelay);
 	}
 }
 

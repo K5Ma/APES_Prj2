@@ -143,7 +143,7 @@ void Log_Msg(uint8_t Src, char* LogLvl, char* OutMsg, uint8_t Mode)
 	switch(Mode)
 	{
 		case LOGGER_ONLY:
-		//	Send_LogMsg_ToBB(Src, LogLvl, OutMsg);
+			Send_LogMsgStruct_ToBB(Src, LogLvl, OutMsg);
 			break;
 
 		case LOGGER_AND_LOCAL:
@@ -165,15 +165,30 @@ void Log_Msg(uint8_t Src, char* LogLvl, char* OutMsg, uint8_t Mode)
 void Log_UART0(float CurrTime, uint8_t Src, char* LogLvl, char* Msg)
 {
 	/* Get name of source */
-	char Source_text[SRC_SIZE];
+//	char Source_text[SRC_SIZE];
+	char *Source_text = (char*) malloc(sizeof(char) * SRC_SIZE);
+	if(Source_text == NULL)
+	{
+		UART_Putchar_n(UART0, ">>> Error Source_text malloc\n");
+	}
+
+	//char Source_text[SRC_SIZE];
 	EnumtoString(Src, Source_text);
 
 	/* Convert all data into a string */
-	char UART0_Log[150];
-	snprintf(UART0_Log, 150, "> [%.3f] Log Event(%s): %s\n\r> L->Source: %s\n\n\r", CurrTime, LogLvl, Msg, Source_text);
+//	char UART0_Log[100];
+	char *UART0_Log = (char*) malloc(sizeof(char) * 120);
+	if(UART0_Log == NULL)
+	{
+		UART_Putchar_n(UART0, ">>> Error UART0_Log malloc\n");
+	}
+	snprintf(UART0_Log, 120, "> [%.3f] Log Event(%s): %s\n\r> L->Source: %s\n\n\r", CurrTime, LogLvl, Msg, Source_text);
 
 	/* Output to UART0 */
 	UART_Putchar_n(UART0, UART0_Log);
+
+	free(Source_text);
+	free(UART0_Log);
 }
 
 
