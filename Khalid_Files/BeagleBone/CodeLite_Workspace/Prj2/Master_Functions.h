@@ -103,4 +103,16 @@ void Log_Msg(uint8_t Src, char* LogLvl, char* OutMsg, int errnum, uint8_t Mode);
 
 
 
+/**************************************************************************************************************
+ * USAGE: This function XXX
+ *
+ * PARAMETERS:
+ *            - XXX
+ * 
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void Send_NFCStruct_ToTiva();
+
+
+
 #endif /* MY_INCLUDES_MASTER_FUNCTIONS_H_ */

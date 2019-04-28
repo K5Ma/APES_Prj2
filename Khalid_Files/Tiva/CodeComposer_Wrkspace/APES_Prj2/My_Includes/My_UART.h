@@ -45,6 +45,20 @@ typedef enum
 } UART_Bases;
 
 
+
+
+/**************************************************************************************************************
+ * USAGE: This function returns a char from the chosen UART (Blocking).
+ *
+ * PARAMETERS:
+ *            - uint8_t UART_Num => The UART port to read a char from
+ *
+ * RETURNS: char Read_Char
+ **************************************************************************************************************/
+char UART_Getchar(uint8_t UART_Num);
+
+
+
 /**************************************************************************************************************
  * USAGE: Helper function called from UART_Putchar_n(). Simply sends a char to the chosen UART (Blocking).
  *
@@ -71,17 +85,20 @@ void UART_Putchar(uint32_t UART_BASE, char TX_Char);
 void UART_Putchar_n(uint8_t UART_Num, char* TX_String);
 
 
+
 /**************************************************************************************************************
- * USAGE: This function sends a TivaBB_MsgStruct structure to the wanted UART port.
+ * USAGE: This function sends a uint8_t array (buffer) that contains all the data for a struct to the
+ *        BeagleBone.
  *
  * PARAMETERS:
  *            - UART_Struct *UART => The UART port to send the struct to
- *            - TivaBB_MsgStruct StructToSend => Structure to send
+ *            - uint8_t* StructToSend => Buffer structure to send
  *
  * RETURNS: Success => true
  *          Failure => false
  **************************************************************************************************************/
-//bool Send_Struct_UARTx(uint8_t UART_Num, TivaBB_MsgStruct StructToSend);
+bool Send_StructBuffer_UARTx(uint8_t UART_Num, uint8_t* StructToSend);
+
 
 
 /**************************************************************************************************************

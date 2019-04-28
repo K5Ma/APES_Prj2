@@ -46,6 +46,10 @@ uint8_t Outputs_TaskInit()
 
 void Outputs_Task(void *pvParameters)
 {
+	/* Delay a bit to make sure BBComm Task starts-up first */
+	const TickType_t xDelay = 10 / portTICK_PERIOD_MS;
+	vTaskDelay(xDelay);
+
 
 	while(1)
 	{

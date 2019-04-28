@@ -20,7 +20,7 @@
 #include "Global_Defines.h"
 #include "Master_Functions.h"
 
-
+//LATEST
 
 void * LoggerThread(void * args)
 {
@@ -33,28 +33,41 @@ void * LoggerThread(void * args)
 
 	/* Create the Logging Thread POSIX queue */
 	mqd_t MQ;											//Message queue descriptor
-
+	
+	
+	/* Delete any previous Logger POSIX Qs */
+	if(mq_unlink(LOGGER_POSIX_Q) != 0)
+	{
+		Log_Msg(BB_Logger, "ERROR", "mq_unlink()", errno, LOCAL_ONLY);
+	}
+	else
+	{
+		Log_Msg(BB_Logger, "INFO", "Previous Logger queue was found and successfully unlinked!", 0, LOCAL_ONLY);
+	}
+	
+	
 	/* Initialize the queue attributes */
 	struct mq_attr attr;
 	attr.mq_flags = 0;									/* Flags: 0 or O_NONBLOCK */
 	attr.mq_maxmsg = 10;								/* Max. # of messages on queue */
-	attr.mq_msgsize = sizeof(Log_MsgStruct);			/* Max. message size (bytes) */
+	attr.mq_msgsize = sizeof(LogMsg_Struct);			/* Max. message size (bytes) */
 	attr.mq_curmsgs = 0;								/* # of messages currently in queue */
 
-	/* Create the Logging Thread queue to get messages from other pThreads */
+	/* Create the Logger Thread queue to get messages from other pThreads */
 	MQ = mq_open(LOGGER_POSIX_Q, O_CREAT | O_RDONLY | O_CLOEXEC, 0666, &attr);
 	if(MQ == (mqd_t) -1)
 	{
 		Log_Msg(BB_Logger, "CRITICAL", "mq_open()", errno, LOCAL_ONLY);
 	}
 
-	Log_MsgStruct MsgRecv;                              //Temp variable used to store received messages
+	
+	LogMsg_Struct MsgRecv;                              //Temp variable used to store received messages
 
 	/* Loop forever waiting for Msgs from other pThreads */
 	while(1)
 	{
 		/* Block until a msg is received */
-		if(mq_receive(MQ, &MsgRecv, sizeof(Log_MsgStruct), NULL) == -1)
+		if( mq_receive(MQ, (char *)&MsgRecv, sizeof(MsgRecv), NULL) == -1 )
 		{
 			Log_Msg(BB_Logger, "ERROR", "mq_receive()", errno, LOCAL_ONLY);
 		}
@@ -158,7 +171,7 @@ void LogFile_Init(char* LogFilePath)
 
 
 
-void LogFile_Log(char* LogFilePath, Log_MsgStruct* Message)
+void LogFile_Log(char* LogFilePath, LogMsg_Struct* Message)
 {
 	/* File pointer */
 	FILE *MyFileP;

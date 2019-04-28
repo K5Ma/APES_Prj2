@@ -13,7 +13,7 @@ CurrentFileName        :=
 CurrentFilePath        :=
 CurrentFileFullPath    :=
 User                   :=K5M
-Date                   :=04/27/19
+Date                   :=04/28/19
 CodeLitePath           :="/home/debian/.codelite"
 LinkerName             :=/usr/bin/g++ 
 SharedObjectLinkerName :=/usr/bin/g++ -shared -fPIC
@@ -60,7 +60,7 @@ AS       := /usr/bin/as
 ## User defined environment variables
 ##
 CodeLiteDir:=/usr/share/codelite
-Objects0=$(IntermediateDirectory)/main.c$(ObjectSuffix) $(IntermediateDirectory)/Master_Functions.c$(ObjectSuffix) $(IntermediateDirectory)/TivaComm_Thread.c$(ObjectSuffix) $(IntermediateDirectory)/My_UART_BB.c$(ObjectSuffix) $(IntermediateDirectory)/Logger_Thread.c$(ObjectSuffix) 
+Objects0=$(IntermediateDirectory)/main.c$(ObjectSuffix) $(IntermediateDirectory)/Master_Functions.c$(ObjectSuffix) $(IntermediateDirectory)/TivaComm_Thread.c$(ObjectSuffix) $(IntermediateDirectory)/My_UART_BB.c$(ObjectSuffix) $(IntermediateDirectory)/Logger_Thread.c$(ObjectSuffix) $(IntermediateDirectory)/NFC_Thread.c$(ObjectSuffix) $(IntermediateDirectory)/KeypadEpaper_Thread.c$(ObjectSuffix) $(IntermediateDirectory)/LoadCell_Thread.c$(ObjectSuffix) 
 
 
 
@@ -126,6 +126,30 @@ $(IntermediateDirectory)/Logger_Thread.c$(DependSuffix): Logger_Thread.c
 
 $(IntermediateDirectory)/Logger_Thread.c$(PreprocessSuffix): Logger_Thread.c
 	@$(CC) $(CFLAGS) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/Logger_Thread.c$(PreprocessSuffix) "Logger_Thread.c"
+
+$(IntermediateDirectory)/NFC_Thread.c$(ObjectSuffix): NFC_Thread.c $(IntermediateDirectory)/NFC_Thread.c$(DependSuffix)
+	$(CC) $(SourceSwitch) "/home/debian/Desktop/CodeLite_Workspace/Prj2/NFC_Thread.c" $(CFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/NFC_Thread.c$(ObjectSuffix) $(IncludePath)
+$(IntermediateDirectory)/NFC_Thread.c$(DependSuffix): NFC_Thread.c
+	@$(CC) $(CFLAGS) $(IncludePath) -MG -MP -MT$(IntermediateDirectory)/NFC_Thread.c$(ObjectSuffix) -MF$(IntermediateDirectory)/NFC_Thread.c$(DependSuffix) -MM "NFC_Thread.c"
+
+$(IntermediateDirectory)/NFC_Thread.c$(PreprocessSuffix): NFC_Thread.c
+	@$(CC) $(CFLAGS) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/NFC_Thread.c$(PreprocessSuffix) "NFC_Thread.c"
+
+$(IntermediateDirectory)/KeypadEpaper_Thread.c$(ObjectSuffix): KeypadEpaper_Thread.c $(IntermediateDirectory)/KeypadEpaper_Thread.c$(DependSuffix)
+	$(CC) $(SourceSwitch) "/home/debian/Desktop/CodeLite_Workspace/Prj2/KeypadEpaper_Thread.c" $(CFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/KeypadEpaper_Thread.c$(ObjectSuffix) $(IncludePath)
+$(IntermediateDirectory)/KeypadEpaper_Thread.c$(DependSuffix): KeypadEpaper_Thread.c
+	@$(CC) $(CFLAGS) $(IncludePath) -MG -MP -MT$(IntermediateDirectory)/KeypadEpaper_Thread.c$(ObjectSuffix) -MF$(IntermediateDirectory)/KeypadEpaper_Thread.c$(DependSuffix) -MM "KeypadEpaper_Thread.c"
+
+$(IntermediateDirectory)/KeypadEpaper_Thread.c$(PreprocessSuffix): KeypadEpaper_Thread.c
+	@$(CC) $(CFLAGS) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/KeypadEpaper_Thread.c$(PreprocessSuffix) "KeypadEpaper_Thread.c"
+
+$(IntermediateDirectory)/LoadCell_Thread.c$(ObjectSuffix): LoadCell_Thread.c $(IntermediateDirectory)/LoadCell_Thread.c$(DependSuffix)
+	$(CC) $(SourceSwitch) "/home/debian/Desktop/CodeLite_Workspace/Prj2/LoadCell_Thread.c" $(CFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/LoadCell_Thread.c$(ObjectSuffix) $(IncludePath)
+$(IntermediateDirectory)/LoadCell_Thread.c$(DependSuffix): LoadCell_Thread.c
+	@$(CC) $(CFLAGS) $(IncludePath) -MG -MP -MT$(IntermediateDirectory)/LoadCell_Thread.c$(ObjectSuffix) -MF$(IntermediateDirectory)/LoadCell_Thread.c$(DependSuffix) -MM "LoadCell_Thread.c"
+
+$(IntermediateDirectory)/LoadCell_Thread.c$(PreprocessSuffix): LoadCell_Thread.c
+	@$(CC) $(CFLAGS) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/LoadCell_Thread.c$(PreprocessSuffix) "LoadCell_Thread.c"
 
 
 -include $(IntermediateDirectory)/*$(DependSuffix)

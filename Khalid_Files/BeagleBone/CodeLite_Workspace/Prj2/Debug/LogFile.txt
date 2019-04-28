@@ -1,4 +1,4 @@
-> [Sat Apr 27 00:14:57] Log Event(INFO): Logfile successfully created! TID: 29088
+> [Sun Apr 28 03:00:51] Log Event(INFO): Logfile successfully created! TID: 17435
 > L->Source: Logger Thread
 
 
@@ -14,9 +14,9 @@
 > *                                            v1.5 *
 > ***************************************************
 
-> [Sat Apr 27 00:14:59] Log Event(INFO): SUCCESS: Created TivaComm Thread!
+> [Sun Apr 28 03:00:52] Log Event(INFO): SUCCESS: Created TivaComm Thread!
 > L->Source: Main Thread
 
-> [Sat Apr 27 00:14:59] Log Event(INFO): UART1 port initialized successfully
+> [Sun Apr 28 03:00:52] Log Event(INFO): UART1 port initialized successfully
 > L->Source: TivaComm Thread
 

@@ -14,12 +14,14 @@
 #include <errno.h>
 #include <time.h>
 #include <fcntl.h>
-
-
+#include <locale.h>
 
 //My includes
 #include "Global_Defines.h"
 
+
+/* Global variables */
+	
 
 
 double GetCurrentTime()
@@ -148,9 +150,9 @@ void EnumtoString(uint8_t EnumNum, char* Str)
 
 void SendToLoggerThreadQ(uint8_t Src, char* Log, char* Message)
 {
-	Log_MsgStruct Msg2Send =
+	LogMsg_Struct Msg2Send =
 	{
-		.ID = 1,
+		.ID = LogMsg_Struct_ID,
 		.Src = Src
 	};
 	strcpy(Msg2Send.LogLevel, Log);
@@ -174,7 +176,7 @@ void SendToLoggerThreadQ(uint8_t Src, char* Log, char* Message)
 	}
 	
 	/* Send Msg to POSIX queue */
-	if(mq_send(MQ, &Msg2Send, sizeof(Log_MsgStruct), 0) != 0)
+	if(mq_send(MQ, &Msg2Send, sizeof(LogMsg_Struct), 0) != 0)
 	{
 		snprintf(ErrMsg, MSGSTR_SIZE, "SendToLoggerThreadQ() => mq_send(), attempted to send message '%s' to Logger queue", Msg2Send.Msg);
 		Log_Msg(Msg2Send.Src, "ERROR", ErrMsg, errno, LOCAL_ONLY);
@@ -201,11 +203,14 @@ void Log_Msg(uint8_t Src, char* LogLvl, char* OutMsg, int errnum, uint8_t Mode)
 	/* If the errno is not 0, that means we are logging an error */
 	if(errnum != 0)
 	{
-		char ErrMsg_strerror[MSGSTR_SIZE];										//Stores the strerror_r error message
-	
-		strerror_r(errnum, ErrMsg_strerror, MSGSTR_SIZE);						//Get error via a thread-safe function
-	
-		snprintf(Output_Log, MSGSTR_SIZE, "%s: %s", OutMsg, ErrMsg_strerror);	//Combine user message with the strerror
+		/* Get error via a thread-safe function which is strerror_l(). 	
+		 * Create locale */
+		locale_t locale = newlocale(LC_CTYPE_MASK|LC_NUMERIC_MASK|LC_TIME_MASK|
+                                    LC_COLLATE_MASK|LC_MONETARY_MASK|LC_MESSAGES_MASK,
+                                    "",(locale_t)0);
+		
+		/* Combine user message with the strerror */
+		snprintf(Output_Log, MSGSTR_SIZE, "%s: %s", OutMsg, strerror_l(errnum, locale));	
 	}
 	else
 	{
@@ -235,3 +240,30 @@ void Log_Msg(uint8_t Src, char* LogLvl, char* OutMsg, int errnum, uint8_t Mode)
 			break;
 	}
 }
+
+
+
+void Send_NFCStruct_ToTiva()
+{
+//	/* Create the struct to send */
+//	LogMsg_Struct StructToSend =
+//	{
+//	 	 .ID = LogMsg_Struct_ID,
+//		 .Src = Src
+//	};
+//	strcpy(StructToSend.LogLevel, LogLvl);
+//	strcpy(StructToSend.Msg, OutMsg);
+//
+//	/* Create an array of bytes to fit the given struct */
+//	uint8_t Buffer_Struct[sizeof(StructToSend)+1];
+//
+//	/* Copy the contents of our struct to the char array */
+//	memcpy(Buffer_Struct, &StructToSend, sizeof(StructToSend));
+//
+//	/* Send Struct to BBComm Task xQueue - Wait for 10 ticks if xQueue is full */
+//	if ( (xQueueSend( xQueue_TXStruct, &StructToSend, ( TickType_t ) 10 ) ) != pdTRUE)
+//	{
+//		Log_Msg(Src, "ERROR", "Could not send LogMsgStruct to xQueue_TXStruct", LOCAL_ONLY);
+//	}
+}
+

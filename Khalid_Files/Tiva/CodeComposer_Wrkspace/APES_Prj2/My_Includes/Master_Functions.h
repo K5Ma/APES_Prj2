@@ -23,6 +23,19 @@
 void DisplayBootUpMsg(uint8_t UARTPort);
 
 
+
+/**************************************************************************************************************
+ * USAGE: This function simply gets the current time in ms (elapsed time not real-time) based on the ticks.
+ *
+ * PARAMETERS:
+ *            - NONE
+ *
+ * RETURNS: float Current_Time_in_ms
+ **************************************************************************************************************/
+float GetCurrentTime();
+
+
+
 /**************************************************************************************************************
  * USAGE: This function takes in a number and updates a given string with the name linked to the enum
  *        (enums found in Global_Defines.h). Tasks are on Tiva while Threads are on BeagleBone.
@@ -37,6 +50,7 @@ void DisplayBootUpMsg(uint8_t UARTPort);
 void EnumtoString(uint8_t EnumNum, char* Str);
 
 
+
 /**************************************************************************************************************
  * USAGE: This function will output a message to the UART0 (make sure to Init the UART first!). This function
  *		  should mainly be used in tasks to log errors to the local UART0 and small stuff that do not need to be
@@ -45,7 +59,7 @@ void EnumtoString(uint8_t EnumNum, char* Str);
  * PARAMETERS:
  *            - float CurrTime => The current time (use GetCurrentTime() in this parameter)
  *            - uint8_t Src => Source of the message (Look at Global_Defines.h Source Enums)
- *            - char* LogLvl => Level of message (INFO / ERROR / CRITICAL)
+ *            - char* LogLvl => Level of message (INFO / ERROR / CRITICAL etc.)
  *            - char* Msg => The message to display
  *
  * RETURNS: NONE
@@ -78,27 +92,20 @@ void Log_UART0(float CurrTime, uint8_t Src, char* LogLvl, char* Msg);
 void Log_Msg(uint8_t Src, char* LogLvl, char* OutMsg, uint8_t Mode);
 
 
-/**************************************************************************************************************
- * USAGE: This function simply gets the current time in ms (elapsed time not real-time) based on the ticks.
- *
- * PARAMETERS:
- *            - NONE
- *
- * RETURNS: float Current_Time_in_ms
- **************************************************************************************************************/
-float GetCurrentTime();
-
-
 
 /**************************************************************************************************************
- * USAGE: This function XXX
+ * USAGE: This function usues the given info to create a LogMsg_Struct and then send it to the BBComm xQueue
+ *        to TX the struct over to the BeagleBone.
  *
  * PARAMETERS:
- *            - NONE
+ *            - uint8_t Src => Source of the message (Look at Global_Defines.h Source Enums)
+ *            - char* LogLvl => Level of message (INFO / ERROR / CRITICAL etc.)
+ *            - char* Msg => The message to display
  *
  * RETURNS: NONE
  **************************************************************************************************************/
-//uint8_t SendMsgToBB(MsgStruct *MsgToSend);
+void Send_LogMsgStruct_ToBB(uint8_t Src, char* LogLvl, char* OutMsg);
+
 
 
 #endif /* MY_INCLUDES_MASTER_FUNCTIONS_H_ */

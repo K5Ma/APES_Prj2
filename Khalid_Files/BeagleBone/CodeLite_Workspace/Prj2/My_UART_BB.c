@@ -157,69 +157,99 @@ int8_t Send_String_UARTx(UART_Struct *UART, char *TX_String)
 
 
 
-bool Send_Struct_UARTx(UART_Struct *UART, TivaBB_MsgStruct StructToSend)
+bool Send_StructBuffer_UARTx(UART_Struct *UART, uint8_t* StructToSend)
 {
-	/* Error handling */
-	if(UART == NULL)
+	/* Error handling - Assert the given UART number is valid */
+	ASSERT( UART_Num <= 7 );
+
+	uint16_t SizeOfStruct;
+
+	/* Get what structure it is, based on the first byte */
+	switch( StructToSend[0] )
 	{
-		printf("> Error: UART structure not initialized\n");
-		return false;
-	}
-	
-	/* Create an array of bytes to fit the given struct */
-	unsigned char buffer[sizeof(StructToSend)+1];
-	
-	/* Copy the contents of our struct to the char array */
-	memcpy( buffer, &StructToSend, sizeof(StructToSend) );
-	
-	/* Create a pointer that will iterate through the array and TX to Tiva side */
-	unsigned char* ptr = &buffer;
-	
-	int16_t BytesRead;		//Stores bytes read or error
-	char RX_BYTE[1];		//Stores the RX byte
-	
-	/* Loop for each element */
-	for(uint8_t i = 0; i < sizeof(StructToSend); i++)
-	{
-		/* TX one byte at a time, check for errors */
-		if(write(UART->fd, ptr, 1) == -1)
-		{
-			printf("> Error: Could not finish sending struct to UART %u\n> Exiting Send_Struct_UARTx()", UART->UART_ID);
+		case LogMsg_Struct_ID:
+			Log_Msg(T_BBComm, "DEBUG", "STRUCTURE TO SEND IS LOGMSG", LOCAL_ONLY);
+			SizeOfStruct = sizeof(LogMsg_Struct);
+			break;
+
+
+
+		default:
+			Log_Msg(T_BBComm, "ERROR", "Send_StructBuffer_UARTx() aborted - unknown structure!", LOCAL_ONLY);
 			return false;
-		}
-		else
-		{
-			/* TX was successful, increment pointer */
-			ptr++;
-		//	printf("> DEBUG => Sent Byte!\n");
-		}
-		
-		/* Wait for a response => '#' before the next TX - Blocking RX poll */
-		BytesRead = read(UART->fd,(void*)RX_BYTE, 1);
-		
-		/* Error check */
-		if(BytesRead == -1)
-		{
-			printf("> Error: Could not finish sending struct to UART %u\n> Exiting Send_Struct_UARTx()", UART->UART_ID);
-			return false;
-		}
-		else
-		{
-		//	printf("> Read '%s' from UART %u\n", RX_BYTE, UART->UART_ID);
-		}
 	}
-	
-	/* After all structure bytes are sent, send END => '!' */
-	if(write(UART->fd, (void *)"!", 1) == -1)
+
+	uint16_t i;
+	for(i = 0; i < SizeOfStruct; i++)
 	{
-		printf("> Error: Could not finish sending struct to UART %u\n> Exiting Send_Struct_UARTx()", UART->UART_ID);
-		return false;
+		UART_Putchar(UARTBase[UART_Num], StructToSend[i]);
 	}
-	else
-	{
-		return true;
-	}
+
+	return true;
 }
+//bool Send_Struct_UARTx(UART_Struct *UART, TivaBB_MsgStruct StructToSend)
+//{
+//	/* Error handling */
+//	if(UART == NULL)
+//	{
+//		printf("> Error: UART structure not initialized\n");
+//		return false;
+//	}
+//	
+//	/* Create an array of bytes to fit the given struct */
+//	unsigned char buffer[sizeof(StructToSend)+1];
+//	
+//	/* Copy the contents of our struct to the char array */
+//	memcpy( buffer, &StructToSend, sizeof(StructToSend) );
+//	
+//	/* Create a pointer that will iterate through the array and TX to Tiva side */
+//	unsigned char* ptr = &buffer;
+//	
+//	int16_t BytesRead;		//Stores bytes read or error
+//	char RX_BYTE[1];		//Stores the RX byte
+//	
+//	/* Loop for each element */
+//	for(uint8_t i = 0; i < sizeof(StructToSend); i++)
+//	{
+//		/* TX one byte at a time, check for errors */
+//		if(write(UART->fd, ptr, 1) == -1)
+//		{
+//			printf("> Error: Could not finish sending struct to UART %u\n> Exiting Send_Struct_UARTx()", UART->UART_ID);
+//			return false;
+//		}
+//		else
+//		{
+//			/* TX was successful, increment pointer */
+//			ptr++;
+//		//	printf("> DEBUG => Sent Byte!\n");
+//		}
+//		
+//		/* Wait for a response => '#' before the next TX - Blocking RX poll */
+//		BytesRead = read(UART->fd,(void*)RX_BYTE, 1);
+//		
+//		/* Error check */
+//		if(BytesRead == -1)
+//		{
+//			printf("> Error: Could not finish sending struct to UART %u\n> Exiting Send_Struct_UARTx()", UART->UART_ID);
+//			return false;
+//		}
+//		else
+//		{
+//		//	printf("> Read '%s' from UART %u\n", RX_BYTE, UART->UART_ID);
+//		}
+//	}
+//	
+//	/* After all structure bytes are sent, send END => '!' */
+//	if(write(UART->fd, (void *)"!", 1) == -1)
+//	{
+//		printf("> Error: Could not finish sending struct to UART %u\n> Exiting Send_Struct_UARTx()", UART->UART_ID);
+//		return false;
+//	}
+//	else
+//	{
+//		return true;
+//	}
+//}
 
 
 

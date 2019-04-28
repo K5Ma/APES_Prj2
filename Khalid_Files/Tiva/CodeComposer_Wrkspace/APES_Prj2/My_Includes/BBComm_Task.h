@@ -34,4 +34,18 @@ void BBComm_Task(void *pvParameters);
 
 
 
+/**************************************************************************************************************
+ * USAGE: This function decodes a given buffer containing buffer data, created the structure needed and then
+ *        send it to the targeted thread.
+ *
+ * PARAMETERS:
+ *            - uint8_t* StructToDecode => The buffer with structure data to decode
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void Decode_StructBuffer(uint8_t* StructToDecode);
+
+
+
+
 #endif /* MY_INCLUDES_BBCOMM_TASK_H_ */

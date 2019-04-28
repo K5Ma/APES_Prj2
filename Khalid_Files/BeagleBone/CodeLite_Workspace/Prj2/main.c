@@ -11,8 +11,11 @@
 #include "Global_Defines.h"
 #include "Master_Functions.h"
 #include "My_UART_BB.h"
-#include "TivaComm_Thread.h"
 #include "Logger_Thread.h"
+#include "TivaComm_Thread.h"
+#include "NFC_Thread.h"
+#include "KeypadEpaper_Thread.h"
+#include "LoadCell_Thread.h"
 
 
 /* Global Variables */
@@ -23,8 +26,6 @@ volatile bool POLL_RX = false;                          //Flag used to know if w
 
 
 /* LAST WORKING ON:
- * KEEP WORKING ON PROPER API FOR RXING A LOG MESSAGE FROM TIVA
- * THEN GO TO TIVA AND MAKE A PROPER LOGMSG STRUCT SEND UART FUNCTION!
  * 
  */
  
@@ -74,7 +75,7 @@ volatile bool POLL_RX = false;                          //Flag used to know if w
  * 14- [COMPLETED] CREATE A PROPER TX FUNCTION FOR THE STRUCTURE
  * 				L-> CREATED 
  * 
- * 15- [] RX A STRUCT FROM TIVA IN A COMPLETE WAY WITH START, CONFIRM AND END CMDS
+ * 15- [COMPLETED!!!!] RX A STRUCT FROM TIVA IN A COMPLETE WAY WITH START, CONFIRM AND END CMDS
  * 
  * 16- [UNABLE TO DO] PROBABLY NEED TO HAVE FUNCITON HANDLE TX DIFFERENT STRUCT TYPES
  *              L-> IN C YOU CANNOT PASS DIFFFERENT STURCTS IN ONE FUNCITON, HAVE TO HAVE SEPEARATE FUNCTIONS. 
@@ -90,9 +91,9 @@ volatile bool POLL_RX = false;                          //Flag used to know if w
  * 19- [COMPLETED] CREATE A NEW FUNCTION THAT UPDATED GIVEN STRING BASED ON ENUM SOURCE NUMBER
  * 				L-> CREATED EnumtoString() FOUND IN Global_Defines.h/.c
  * 
- * 20- [] NEED TO ADD THE NEW LOGGER STURCT 
+ * 20- [COMPLETED] NEED TO ADD THE NEW LOGGER STURCT 
  * 
- * 21- [] TEST RXING A LOG EVENT FROM TIVA
+ * 21- [COMPLETED!!!!!] TEST RXING A LOG EVENT FROM TIVA
  * 
  * 22- [] NEED TO CREATE PROPER POSIX Q FOR TIVACOMM THAT STORES BYTE ARRAYS
  * 
@@ -107,7 +108,7 @@ volatile bool POLL_RX = false;                          //Flag used to know if w
  * - Found out that BB can handle fast UART data coming in from Tiva, meaning no need for confirmation
  *   (#) when RXing here on BB side
  * 
- * -
+ * - 
  *
  */
  
@@ -117,8 +118,6 @@ int main(int argc, char **argv)
 	struct Pthread_ArgsStruct args;						//Create the pthread args structure
 
 	char User_LogFilePath[100];							//This will store the log file path location to pass to the Logging pthread
-
-	printf("Starting BB Prj2... PID: %d\n\n", getpid());
 
 	/* Check if the user entered a logfile path */
 	if(argc > 1)
@@ -142,7 +141,7 @@ int main(int argc, char **argv)
 
 	
 	/* Create the needed pThreads */
-	pthread_t Logger_pThread, TivaComm_pThread;
+	pthread_t Logger_pThread, TivaComm_pThread, NFC_pThread, KeypadEpaper_pThread, LoadCell_pThread;
 
 
 	/* Create Logger pThread */
@@ -155,8 +154,8 @@ int main(int argc, char **argv)
 		Log_Msg(BB_Main, "INFO", "SUCCESS: Created Logger Thread!", 0, LOCAL_ONLY);
 	}
 	
-	/* Wait a bot to ensure the Logger thread starts up first */
-	sleep(2);
+	/* Wait a bit to ensure the Logger thread starts up first */
+	sleep(1);
 
 	/* Create TivaComm pThread */
 	if(pthread_create(&TivaComm_pThread, NULL, &TivaCommThread, NULL) != 0)
@@ -167,11 +166,47 @@ int main(int argc, char **argv)
 	{
 		Log_Msg(BB_Main, "INFO", "SUCCESS: Created TivaComm Thread!", 0, LOGGER_AND_LOCAL);
 	}
+	
+	/* Wait a bit to ensure the TivaComm thread starts up second */
+	sleep(1);
+	
+	/* Create NFC pThread */
+	if(pthread_create(&NFC_pThread, NULL, &NFCThread, NULL) != 0)
+	{
+		Log_Msg(BB_Main, "FATAL", "NFC pthread_create()", errno, LOGGER_AND_LOCAL);
+	}
+	else
+	{
+		Log_Msg(BB_Main, "INFO", "SUCCESS: Created NFC Thread!", 0, LOGGER_AND_LOCAL);
+	}
+	
+	/* Create KeypadEpaper pThread */
+	if(pthread_create(&KeypadEpaper_pThread, NULL, &KeypadEpaperThread, NULL) != 0)
+	{
+		Log_Msg(BB_Main, "FATAL", "KeypadEpaper pthread_create()", errno, LOGGER_AND_LOCAL);
+	}
+	else
+	{
+		Log_Msg(BB_Main, "INFO", "SUCCESS: Created KeypadEpaper Thread!", 0, LOGGER_AND_LOCAL);
+	}
+	
+	/* Create LoadCell pThread */
+	if(pthread_create(&LoadCell_pThread, NULL, &LoadCellThread, NULL) != 0)
+	{
+		Log_Msg(BB_Main, "FATAL", "LoadCell pthread_create()", errno, LOGGER_AND_LOCAL);
+	}
+	else
+	{
+		Log_Msg(BB_Main, "INFO", "SUCCESS: Created LoadCell Thread!", 0, LOGGER_AND_LOCAL);
+	}
 
 
 	/* Wait for pThreads to finish */
 	pthread_join(Logger_pThread, NULL);
 	pthread_join(TivaComm_pThread, NULL);
+	pthread_join(NFC_pThread, NULL);
+	pthread_join(KeypadEpaper_pThread, NULL);
+	pthread_join(LoadCell_pThread, NULL);
 
 	return 0;
 }

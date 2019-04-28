@@ -33,12 +33,24 @@ void * TivaCommThread(void * args)
 	/* Create the TivaComm Thread POSIX queue */
 	mqd_t MQ;											//Message queue descriptor
 
+	/* Delete any previous TivaComm POSIX Qs */
+	if(mq_unlink(TIVACOMM_POSIX_Q) != 0)
+	{
+		Log_Msg(BB_TivaComm, "ERROR", "mq_unlink()", errno, LOCAL_ONLY);
+	}
+	else
+	{
+		Log_Msg(BB_TivaComm, "INFO", "Previous TivaComm queue was found and successfully unlinked!", 0, LOCAL_ONLY);
+	}
+	
+	
 	/* Initialize the queue attributes */
 	struct mq_attr attr;
 	attr.mq_flags = O_NONBLOCK;                         /* Flags: 0 or O_NONBLOCK */
 	attr.mq_maxmsg = 10;                                /* Max. # of messages on queue */
 	attr.mq_msgsize = MAX_STRUCT_SIZE;                  /* Max. message size (bytes) */
 	attr.mq_curmsgs = 0;                                /* # of messages currently in queue */
+
 
 	/* Create the TivaComm Thread queue to get byte structs from other pThreads
 	 * and TX them to Tiva via UART (Bluetooth) */
@@ -64,70 +76,67 @@ void * TivaCommThread(void * args)
 	}
 	
 	
-	//CHECK TO TX MESSAGES IF NO RX IS NEEDED
+	/* Create an array of bytes to fit any given struct */
+	uint8_t TX_Struct_Buffer[MAX_STRUCT_SIZE];
+	
 	
 	while(1)
 	{
 		/* If we need to RX something: */
 		if(POLL_RX)
 		{
-			int8_t RX_Index = -1;
+			int16_t RX_Index = -1;
 			
-			printf("> DEBUG => STARTING RX POLL\n");
+		//	Log_Msg(BB_TivaComm, "DEBUG", "STARTING RX POLL", 0, LOCAL_ONLY);
 			
 			/* Create an array of bytes to fit the given struct */
-			char Struct_Buffer[MAX_STRUCT_SIZE];
+			uint8_t RX_Struct_Buffer[MAX_STRUCT_SIZE];
 			
 			/* Create a pointer that will iterate through the array and RX from Tiva side */
-			char* ptr = &Struct_Buffer;
+			uint8_t* ptr = &RX_Struct_Buffer;
 			
 			/* Keep adding to the buffer until we get a "!" */
 			do
-			{
-				/* Send confirmation to get next byte */
-			//	Send_String_UARTx(BB_UART1, "#");
-				
+			{				
 				/* Block and get byte */
 				if(read(BB_UART1->fd, ptr, 1) == -1)
 				{
 					printf("> Error: Could not read byte from UART1\n");
-					//return false;
 				}
 				else
 				{
 					/* RX was successful, increment pointer */
 					ptr++;
 					RX_Index++;
-					//printf("> DEBUG => Got Byte!\n");
 				}
-			} while ( Struct_Buffer[RX_Index] != END_CMD );
+			} while ( RX_Struct_Buffer[RX_Index] != END_CMD_CHAR );
 			
-			printf("Done polling! GOT: %s\n\n", Struct_Buffer);
+			RX_Struct_Buffer[RX_Index] = '\x00';
+			
+		//	Log_Msg(BB_TivaComm, "DEBUG", "GOT STRUCT", 0, LOCAL_ONLY);
+			
+			Decode_StructBuffer(RX_Struct_Buffer);
+			
+			POLL_RX = false;
+		}
+
+		/* Else, check if we need to TX something */
+	//	else if ( (mq_receive(MQ, TX_Struct_Buffer, sizeof(MAX_STRUCT_SIZE), NULL) ) != -1 )
+	//	{
+			Log_Msg(BB_TivaComm, "DEBUG", "GOT STRUCT TO TX!", 0, LOCAL_ONLY);
+			
+			Send_String_UARTx(BB_UART1, START_CMD);                       //Send Start CMD to Tiva
+			
+			//NEED TO TX STRCUT HERE
+			Send_StructBuffer_UARTx(UART_Struct *UART, uint8_t* StructToSend);
+			
+			Send_String_UARTx(BB_UART1, END_CMD);                         //Send END CMD to Tiva
 			
 			while(1);
-	
-	/* Copy the contents of our struct to the char array */
-//	memcpy( buffer, &StructToSend, sizeof(StructToSend) );
-	
-			
-		}
-		/* Else, check for struct (byte array) to TX */
-//		else if ( (mq_receive(MQ, &MsgRecv, sizeof(MAX_STRUCT_SIZE), NULL) ) != -1 )
-//		{
-			
 //		}
 	}
-
-//	TivaBB_MsgStruct TempStruct = 
-//	{
-//		.Src = BB_TivaComm,
-//		.Dest = T_BBComm
-//	};
-//	
-
-	//TEST STRUCT SEND API
-	//Send_Struct_UARTx(BB_UART1, TempStruct);
-
+	
+	
 	if( !Close_UARTx(BB_UART1) )
 	{
 		Log_Msg(BB_TivaComm, "INFO", "UART1 port closed successfully", 0, LOGGER_AND_LOCAL);
@@ -144,6 +153,34 @@ void * TivaCommThread(void * args)
 	Log_Msg(BB_TivaComm, "INFO", "TivaComm Thread has terminated successfully and will now exit", 0, LOGGER_AND_LOCAL);
 	
 	return 0;
+}
+
+
+void Decode_StructBuffer(uint8_t* StructToDecode)
+{
+	
+	/* Create the needed structs that will store buffer contents */
+	LogMsg_Struct LogMsgToSend;
+			
+	/* Get what structure it is, based on the first byte */
+	switch( StructToDecode[0] )
+	{
+		case LogMsg_Struct_ID:
+			//Log_Msg(BB_TivaComm, "DEBUG", "STRUCTURE TO DECODE IS LOGMSG", 0, LOCAL_ONLY);
+			
+			/* Copy the contents of the buffer to the struct */
+			memcpy(&LogMsgToSend , StructToDecode, sizeof(LogMsg_Struct));
+			
+			/* Send to Logger POSIX Q */
+			Log_Msg(LogMsgToSend.Src, LogMsgToSend.LogLevel, LogMsgToSend.Msg, 0, LOGGER_AND_LOCAL);
+			break;
+
+
+
+		default:
+			Log_Msg(BB_TivaComm, "ERROR", "Decode_StructBuffer() aborted - unknown structure!", 0, LOCAL_ONLY);
+			return;
+	}
 }
 
 

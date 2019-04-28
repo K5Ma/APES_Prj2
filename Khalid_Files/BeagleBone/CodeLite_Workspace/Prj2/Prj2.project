@@ -13,6 +13,12 @@
     <File Name="My_UART_BB.c"/>
     <File Name="Logger_Thread.h"/>
     <File Name="Logger_Thread.c"/>
+    <File Name="NFC_Thread.h"/>
+    <File Name="NFC_Thread.c"/>
+    <File Name="KeypadEpaper_Thread.c"/>
+    <File Name="KeypadEpaper_Thread.h"/>
+    <File Name="LoadCell_Thread.h"/>
+    <File Name="LoadCell_Thread.c"/>
   </VirtualDirectory>
   <Settings Type="Executable">
     <GlobalSettings>

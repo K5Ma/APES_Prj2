@@ -35,37 +35,18 @@
 #include "NFC_Task.h"
 #include "KeypadEpaper_Task.h"
 #include "LoadCell_Task.h"
-#include "Lux_Task.h"
-#include "Servo_Task.h"
-#include "SpeakJet_Task.h"
 #include "Outputs_Task.h"
 
 
 /* Global Variables */
-QueueHandle_t xQueue_Msgs = NULL;				//This is the queue the BB_Comm Task will read from and other tasks will send to
-
-
-//TEST
-volatile char BB_Recv[100];
-volatile int BB_Recv_Index = 0;
-volatile bool STRUCT_READY = false;
-volatile TivaBB_MsgStruct TESTSTRUCT;
-volatile unsigned char *myPtr = (unsigned char *)&TESTSTRUCT;
-const unsigned char *BytesToSend;
-int NumBytes = sizeof(TESTSTRUCT);
-
-unsigned char buffer[sizeof(TESTSTRUCT)+1];
+QueueHandle_t xQueue_TXStruct = NULL;				//This is the queue the BB_Comm Task will read from and other tasks will send to
+char Start_RX[1] = "0";								//Will store the start CMD coming in from BB
+volatile bool POLL_RX = false;						//Flag used to know if we are currently RXing from BB or not
 
 
 /* LAST WORKING ON:
  *
  *
- * TO ASK PROF:
- * - STACK SIZE HEAP SIZE ON FREERTOS? I AM NOT SURE
- * - UART ON THE BBG - ARE THEE DEFINE LIBS TO INTERFACE WITH HARDWARE
- * - TELL HIM ABOUT HOW I AM PLANNING TO TANSFER STUFF VIA UART
- * - ANY SUGGESTIONS FROM HIM?
- * -
  */
 
 
@@ -133,16 +114,21 @@ unsigned char buffer[sizeof(TESTSTRUCT)+1];
  * 22- [COMPLETED!] TEST STRUCT SIZE ON TIVA SIDE
  * 				L-> SIZE IS THE SAME AS BB SIDE => 86 BYTES!
  *
- * 23- [] RX STRUCT FROM BB, MODIFY, AND THEN TX BACK TO BB
+ * 23- [SCRAPPED] RX STRUCT FROM BB, MODIFY, AND THEN TX BACK TO BB
  *
  * 24- [COMPLETED] CREATE ALL THE NEEDED BASE TASKS (NFC, KEYPADEPAPER, LOADCELL, LUX AND SERVO)
  * 				L-> RESPECTIVE .h/.c FILES CREATED AND DEFINES ADDED AS WELL AS CALLS TO INIT FROM MAIN
  *
- * 25- [] CREATE A FUNCTION THAT LOGS TO BB AS A NORMAL LOG
+ * 25- [COMPLETED!!!] CREATE A FUNCTION THAT LOGS TO BB AS A NORMAL LOG
+ * 				L-> CREATED Send_LogMsgStruct_ToBB()
  *
- * 26- [] CREATE UART SEND STRING FUNCTION
+ * 26- [COMPLETED] CREATE UART SEND STRING FUNCTION
  *
- * 27- []
+ * 27- [] ADD METHOD TO CHECK IF BT LINK IS ALIVE
+ *
+ * 28- [] LOG LOCALLY IF BT LINK IS DEAD
+ *
+ * 29- []
  *
  *
  * +++++++++++++++++++++ CHANGES: +++++++++++++++++++++
@@ -161,9 +147,7 @@ int main()
 	/* Initialize the GPIO pins for the Launchpad */
 	PinoutSet(false, false);
 
-
-
-	/* Init UART0 - Used for local debugging and errors */
+	/* Init UART0 - Used for local debugging and msgs */
 	Init_UARTx(UART0, SYSTEM_CLOCK, 9600, false);
 	Log_UART0(GetCurrentTime(), T_Main, "INFO", "UART0 was init successfully!");
 
@@ -204,65 +188,35 @@ int main()
 		Log_Msg(T_Main, "INFO", "NFC Task init successfully!", LOCAL_ONLY);
 	}
 
-	/* Init KeypadEpaper Task */
-	if(KeypadEpaper_TaskInit())
-	{
-		Log_Msg(T_Main, "CRITICAL", "Could not init KeypadEpapaer Task!", LOCAL_ONLY);
-	}
-	else
-	{
-		Log_Msg(T_Main, "INFO", "KeypadEpapaer Task init successfully!", LOCAL_ONLY);
-	}
+//	/* Init KeypadEpaper Task */
+//	if(KeypadEpaper_TaskInit())
+//	{
+//		Log_Msg(T_Main, "CRITICAL", "Could not init KeypadEpapaer Task!", LOCAL_ONLY);
+//	}
+//	else
+//	{
+//		Log_Msg(T_Main, "INFO", "KeypadEpapaer Task init successfully!", LOCAL_ONLY);
+//	}
+//
+//	/* Init LoadCell Task */
+//	if(LoadCell_TaskInit())
+//	{
+//		Log_Msg(T_Main, "CRITICAL", "Could not init LoadCell Task!", LOCAL_ONLY);
+//	}
+//	else
+//	{
+//		Log_Msg(T_Main, "INFO", "LoadCell Task init successfully!", LOCAL_ONLY);
+//	}
 
-	/* Init LoadCell Task */
-	if(LoadCell_TaskInit())
-	{
-		Log_Msg(T_Main, "CRITICAL", "Could not init LoadCell Task!", LOCAL_ONLY);
-	}
-	else
-	{
-		Log_Msg(T_Main, "INFO", "LoadCell Task init successfully!", LOCAL_ONLY);
-	}
-
-	/* Init Lux Task */
-	if(Lux_TaskInit())
-	{
-		Log_Msg(T_Main, "CRITICAL", "Could not init Lux Task!", LOCAL_ONLY);
-	}
-	else
-	{
-		Log_Msg(T_Main, "INFO", "Lux Task init successfully!", LOCAL_ONLY);
-	}
-
-	/* Init Servo Task */
-	if(Servo_TaskInit())
-	{
-		Log_Msg(T_Main, "CRITICAL", "Could not init Servo Task!", LOCAL_ONLY);
-	}
-	else
-	{
-		Log_Msg(T_Main, "INFO", "Servo Task init successfully!", LOCAL_ONLY);
-	}
-
-	/* Init SpeakJet Task */
-	if(SpeakJet_TaskInit())
-	{
-		Log_Msg(T_Main, "CRITICAL", "Could not init SpeakJet Task!", LOCAL_ONLY);
-	}
-	else
-	{
-		Log_Msg(T_Main, "INFO", "SpeakJet Task init successfully!", LOCAL_ONLY);
-	}
-
-	/* Init Outputs Task */
-	if(Outputs_TaskInit())
-	{
-		Log_Msg(T_Main, "CRITICAL", "Could not init Outputs Task!", LOCAL_ONLY);
-	}
-	else
-	{
-		Log_Msg(T_Main, "INFO", "Outputs Task init successfully!", LOCAL_ONLY);
-	}
+//	/* Init Outputs Task */
+//	if(Outputs_TaskInit())
+//	{
+//		Log_Msg(T_Main, "CRITICAL", "Could not init Outputs Task!", LOCAL_ONLY);
+//	}
+//	else
+//	{
+//		Log_Msg(T_Main, "INFO", "Outputs Task init successfully!", LOCAL_ONLY);
+//	}
 
 	vTaskStartScheduler();
 	return 0;

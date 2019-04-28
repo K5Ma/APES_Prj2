@@ -25,7 +25,7 @@
 
 
 /* Global Variables */
-extern QueueHandle_t xQueue_Msgs;
+extern QueueHandle_t xQueue_TXStruct;
 
 
 void DisplayBootUpMsg(uint8_t UARTPort)
@@ -44,6 +44,14 @@ void DisplayBootUpMsg(uint8_t UARTPort)
 	UART_Putchar_n(UARTPort, LineTemp);
 	UART_Putchar_n(UARTPort, "> ***************************************************\n\n\r");
 }
+
+
+
+float GetCurrentTime()
+{
+	return ((float)xTaskGetTickCount())/1000;
+}
+
 
 
 void EnumtoString(uint8_t EnumNum, char* Str)
@@ -124,29 +132,31 @@ void EnumtoString(uint8_t EnumNum, char* Str)
 }
 
 
-
 void Log_Msg(uint8_t Src, char* LogLvl, char* OutMsg, uint8_t Mode)
 {
 	/* Get current Tiva time */
 	float CurrTivaTime = GetCurrentTime();
 
+	taskENTER_CRITICAL();
+
 	/* Output message depending on chosen mode */
 	switch(Mode)
 	{
 		case LOGGER_ONLY:
-			//SendToThreadQ(Src, BB_Logger, LogLvl, OutMsg);
+		//	Send_LogMsg_ToBB(Src, LogLvl, OutMsg);
 			break;
 
 		case LOGGER_AND_LOCAL:
 			Log_UART0(CurrTivaTime, Src, LogLvl, OutMsg);
-
-	//		SendToThreadQ(Src, BB_Logger, LogLvl, OutMsg);
+			Send_LogMsgStruct_ToBB(Src, LogLvl, OutMsg);
 			break;
 
 		default:
 			Log_UART0(CurrTivaTime, Src, LogLvl, OutMsg);
 			break;
 	}
+
+	taskEXIT_CRITICAL();
 }
 
 
@@ -167,31 +177,27 @@ void Log_UART0(float CurrTime, uint8_t Src, char* LogLvl, char* Msg)
 }
 
 
-
-float GetCurrentTime()
+void Send_LogMsgStruct_ToBB(uint8_t Src, char* LogLvl, char* OutMsg)
 {
-	return ((float)xTaskGetTickCount())/1000;
+	/* Create the struct to send */
+	LogMsg_Struct StructToSend =
+	{
+	 	 .ID = LogMsg_Struct_ID,
+		 .Src = Src
+	};
+	strcpy(StructToSend.LogLevel, LogLvl);
+	strcpy(StructToSend.Msg, OutMsg);
+
+	/* Create an array of bytes to fit the given struct */
+	uint8_t Buffer_Struct[sizeof(StructToSend)+1];
+
+	/* Copy the contents of our struct to the char array */
+	memcpy(Buffer_Struct, &StructToSend, sizeof(StructToSend));
+
+	/* Send Struct to BBComm Task xQueue - Wait for 10 ticks if xQueue is full */
+	if ( (xQueueSend( xQueue_TXStruct, &StructToSend, ( TickType_t ) 10 ) ) != pdTRUE)
+	{
+		Log_Msg(Src, "ERROR", "Could not send LogMsgStruct to xQueue_TXStruct", LOCAL_ONLY);
+	}
 }
 
-
-
-//uint8_t SendMsgToBB(MsgStruct *MsgToSend)
-//{
-//	/* Add current timestamp to Msg being sent */
-//	MsgToSend->Timestamp = GetCurrentTime();
-//
-//	/* Send Msg to BB_Comm Task, block for 10 ticks (10 ms) for the msg to be sent. Then throw an error if it still fails. */
-//	if ( (xQueueSend( xQueue_Msgs, MsgToSend, ( TickType_t ) 10 )) != pdTRUE )
-//	{
-//		return 1;
-//	}
-//	return 0;
-//}
-////
-///* Convert all data into a string */
-//char UART0_Log[250];
-//snprintf(UART0_Log, 250, "TEST:\nMallocedMsg->Source:%u\nMallocedMsg->LogLevel:%s\nMallocedMsg->Msg:%s\nMallocedMsg->Data_float1:%f\nMallocedMsg->Data_float2:%f\n\n",
-//		 	 	 	 	  MallocedMsg->Source, MallocedMsg->LogLevel, MallocedMsg->Msg, MallocedMsg->Data_float1, MallocedMsg->Data_float2);
-//
-///* Output to UART0 */
-//UART_Putchar_n(UART0, UART0_Log);

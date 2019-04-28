@@ -1,1 +1,1 @@
-./Debug/main.c.o ./Debug/Master_Functions.c.o ./Debug/TivaComm_Thread.c.o ./Debug/My_UART_BB.c.o ./Debug/Logger_Thread.c.o
+./Debug/main.c.o ./Debug/Master_Functions.c.o ./Debug/TivaComm_Thread.c.o ./Debug/My_UART_BB.c.o ./Debug/Logger_Thread.c.o ./Debug/NFC_Thread.c.o ./Debug/KeypadEpaper_Thread.c.o ./Debug/LoadCell_Thread.c.o

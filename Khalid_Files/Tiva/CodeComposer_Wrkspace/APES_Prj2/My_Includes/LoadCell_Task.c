@@ -29,7 +29,7 @@ uint8_t LoadCell_TaskInit()
     //Create task, if it fails return 1, else 0
     if( xTaskCreate(LoadCell_Task,					/* The function that implements the task */
 			   (const portCHAR *)"LoadCell",		/* The text name assigned to the task - for debug only as it is not used by the kernel */
-               ((configMINIMAL_STACK_SIZE) * 1),	/* The size of the stack to allocate to the task */
+               ((configMINIMAL_STACK_SIZE) * 3),	/* The size of the stack to allocate to the task */
 			   NULL,								/* The parameter passed to the task */
 			   PRIORITY_LOADCELL_TASK,	 			/* The priority assigned to the task */
 			   NULL)								/* The task handle is not required, so NULL is passed */
@@ -46,6 +46,10 @@ uint8_t LoadCell_TaskInit()
 
 void LoadCell_Task(void *pvParameters)
 {
+	/* Delay a bit to make sure BBComm Task starts-up first */
+	const TickType_t xDelay = 10 / portTICK_PERIOD_MS;
+	vTaskDelay(xDelay);
+
 
 	while(1)
 	{

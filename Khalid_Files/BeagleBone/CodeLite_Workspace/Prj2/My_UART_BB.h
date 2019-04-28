@@ -116,17 +116,17 @@ int8_t Send_String_UARTx(UART_Struct *UART, char *TX_String);
 
 
 /**************************************************************************************************************
- * USAGE: This function sends a TivaBB_MsgStruct structure to the wanted UART port.
- * 
+ * USAGE: This function sends a uint8_t array (buffer) that contains all the data for a struct to the
+ *        Tiva.
+ *
  * PARAMETERS:
  *            - UART_Struct *UART => The UART port to send the struct to
- *            - TivaBB_MsgStruct StructToSend => Structure to send
+ *            - uint8_t* StructToSend => Buffer structure to send
  *
  * RETURNS: Success => true
  *          Failure => false
  **************************************************************************************************************/
-bool Send_Struct_UARTx(UART_Struct *UART, TivaBB_MsgStruct StructToSend);
-
+bool Send_StructBuffer_UARTx(UART_Struct *UART, uint8_t* StructToSend);
 
 
 /**************************************************************************************************************

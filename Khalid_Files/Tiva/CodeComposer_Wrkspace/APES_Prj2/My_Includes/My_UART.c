@@ -25,16 +25,13 @@
 
 //My includes
 #include "Global_Defines.h"
+#include "Master_Functions.h"
+
 
 /* Global variables */
-extern int BB_Recv_Index;
-extern bool STRUCT_READY;
-extern TivaBB_MsgStruct TESTSTRUCT;
-extern unsigned char *myPtr;
-extern const unsigned char *BytesToSend;
-extern int NumBytes;
+extern char Start_RX[1];
+extern bool POLL_RX;
 
-extern unsigned char buffer[];
 
 
 /*******************************************************************
@@ -70,6 +67,20 @@ static const uint32_t UARTInt[8] =
 };
 
 
+
+char UART_Getchar(uint8_t UART_Num)
+{
+	/* Error handling - Assert the given UART number is valid */
+	ASSERT( UART_Num <= 7 );
+
+    /* Wait until a char is available */
+    while(HWREG(UARTBase[UART_Num] + UART_O_FR) & UART_FR_RXFE);
+
+    /* Return char */
+    return (HWREG(UARTBase[UART_Num] + UART_O_DR));
+}
+
+
 void UART_Putchar(uint32_t UART_BASE, char TX_Char)
 {
 	/* Wait while the UART is busy */
@@ -93,6 +104,37 @@ void UART_Putchar_n(uint8_t UART_Num, char* TX_String)
 	}
 }
 
+
+bool Send_StructBuffer_UARTx(uint8_t UART_Num, uint8_t* StructToSend)
+{
+	/* Error handling - Assert the given UART number is valid */
+	ASSERT( UART_Num <= 7 );
+
+	uint16_t SizeOfStruct;
+
+	/* Get what structure it is, based on the first byte */
+	switch( StructToSend[0] )
+	{
+		case LogMsg_Struct_ID:
+			Log_Msg(T_BBComm, "DEBUG", "STRUCTURE TO SEND IS LOGMSG", LOCAL_ONLY);
+			SizeOfStruct = sizeof(LogMsg_Struct);
+			break;
+
+
+
+		default:
+			Log_Msg(T_BBComm, "ERROR", "Send_StructBuffer_UARTx() aborted - unknown structure!", LOCAL_ONLY);
+			return false;
+	}
+
+	uint16_t i;
+	for(i = 0; i < SizeOfStruct; i++)
+	{
+		UART_Putchar(UARTBase[UART_Num], StructToSend[i]);
+	}
+
+	return true;
+}
 
 
 void Init_UARTx(uint8_t UART_Num, uint32_t Clock, uint32_t BaudRate, bool Interrupt_EN)
@@ -198,21 +240,15 @@ void UART1_IntHandler(void)
 	/* Clear the asserted interrupts */
 	UARTIntClear(UART1_BASE, Flags);
 
-//	/*Loop while there are characters in the receive FIFO */
-//	if( UARTCharsAvail(UART1_BASE) )
-//	{
-//		buffer[BB_Recv_Index] = UARTCharGetNonBlocking(UART1_BASE);
-//
-//		if(buffer[BB_Recv_Index] == '!')
-//		{
-//			STRUCT_READY = true;
-//		}
-//		else
-//		{
-//			BB_Recv_Index++;
-//			UART_Putchar(UART1_BASE, '#');
-//		}
-//	}
+	if( !POLL_RX )
+	{
+		Start_RX[0] = UARTCharGetNonBlocking(UART1_BASE);
+
+		if( strcmp(Start_RX, START_CMD) == 0 )
+		{
+			POLL_RX = true;
+		}
+	}
 }
 
 
