@@ -108,6 +108,9 @@ void EPaper_Keypad_Task(void *pvParameters)
     while(1)
     {
         vTaskDelay(EP_Polling_Timems);
+
+//        taskENTER_CRITICAL();
+
         // Testing whether EPaper is still functional - and connected with the Controller
         // This is done by sending a handshake, and later on checking error flag
         if(EP_Error == false)
@@ -230,6 +233,8 @@ void EPaper_Keypad_Task(void *pvParameters)
            // EPaper Update rate is slow (requires 3 seconds)
            vTaskDelay(EP_Reset_Timems - EP_Polling_Timems);
         }
+
+//        taskEXIT_CRITICAL();
     }
 }
 
@@ -428,10 +433,13 @@ void EP_Send_Command(uint8_t EP_Command_ID, uint8_t EP_Command_Type)
 //        snprintf(tp, sizeof(tp), "%x ", EP_Command_Array[EP_Command_Array_Local_Counter]);
 //        EP_Print(tp);
 //    }
+
+    taskENTER_CRITICAL();
     for(EP_Command_Array_Local_Counter = 0; EP_Command_Array_Local_Counter < EP_Full_Command_Length; EP_Command_Array_Local_Counter ++)
     {
         EP_UART_Tx(EP_Command_Array[EP_Command_Array_Local_Counter]);
     }
+    taskEXIT_CRITICAL();
     EP_Response_Init = 0x00;
 
 #if     EP_DEBUG_PRINTF

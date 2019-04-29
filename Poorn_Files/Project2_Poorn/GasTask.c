@@ -76,8 +76,10 @@ void GasTask(void *pvParameters)
 {
     Gas_Alert = false;
 
+    taskENTER_CRITICAL();
     Gas_ADC_Init();
     Gas_Read();
+    taskEXIT_CRITICAL();
 
     if(Gas_Error == false)
     {
@@ -103,7 +105,9 @@ void GasTask(void *pvParameters)
             #if     Gas_DEBUG_PRINTF
                 Gas_Print("\nGas Sensor is Online");
             #endif
+            taskENTER_CRITICAL();
             Gas_Read();
+            taskEXIT_CRITICAL();
             if(Gas_Error == false)
             {
                 if(Gas_Level > Gas_High_Threshold_Level)

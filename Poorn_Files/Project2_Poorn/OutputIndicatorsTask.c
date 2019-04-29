@@ -87,17 +87,17 @@ void OutputIndicatorsTask(void *pvParameters)
         //enter critical
         if((Temperature_Alert == true) || (Humidity_Alert == true) || (Gas_Alert == true) || (Lux_Alert == true) || (PIR_Alert == true))
         {
-            #if     Output_DEBUG_PRINTF
-                Output_Print("\nHigh Alert Detected...");
-            #endif
+//            #if     Output_DEBUG_PRINTF
+//                Output_Print("\nHigh Alert Detected...");
+//            #endif
             if((Temperature_Alert == true) || (Humidity_Alert == true) || (Gas_Alert == true))      Servo_Door_Open();
             Buzzer_Flag = true;
         }
         else
         {
-            #if     Output_DEBUG_PRINTF
-                Output_Print("\nNo Alert");
-            #endif
+//            #if     Output_DEBUG_PRINTF
+//                Output_Print("\nNo Alert");
+//            #endif
             Buzzer_Flag = false;
             Servo_Door_Close();
         }
@@ -133,25 +133,25 @@ void Buzzer_Init(void)
 void Buzzer_On(void)
 {
     PWMGenEnable(PWM0_BASE, PWM_GEN_1);
-    static int i;
-    static uint32_t clocks;
-    while(1)
-    {
-        for(i = 0; i < 40; i ++)
-        {
-            clocks = (1875000 / ((i * 50) + 50));
-            PWMGenPeriodSet(PWM0_BASE, PWM_GEN_1, clocks);
-            PWMPulseWidthSet(PWM0_BASE, PWM_OUT_2, (clocks / 2));
-            vTaskDelay(50);
-        }
-        for(i = 39; i >= 0; i --)
-        {
-            clocks = (1875000 / ((i * 50) + 50));
-            PWMGenPeriodSet(PWM0_BASE, PWM_GEN_1, clocks);
-            PWMPulseWidthSet(PWM0_BASE, PWM_OUT_2, (clocks / 2));
-            vTaskDelay(50);
-        }
-    }
+//    static int i;
+//    static uint32_t clocks;
+//    while(1)
+//    {
+//        for(i = 0; i < 40; i ++)
+//        {
+//            clocks = (1875000 / ((i * 50) + 50));
+//            PWMGenPeriodSet(PWM0_BASE, PWM_GEN_1, clocks);
+//            PWMPulseWidthSet(PWM0_BASE, PWM_OUT_2, (clocks / 2));
+//            vTaskDelay(50);
+//        }
+//        for(i = 39; i >= 0; i --)
+//        {
+//            clocks = (1875000 / ((i * 50) + 50));
+//            PWMGenPeriodSet(PWM0_BASE, PWM_GEN_1, clocks);
+//            PWMPulseWidthSet(PWM0_BASE, PWM_OUT_2, (clocks / 2));
+//            vTaskDelay(50);
+//        }
+//    }
 }
 
 void Buzzer_Off(void)

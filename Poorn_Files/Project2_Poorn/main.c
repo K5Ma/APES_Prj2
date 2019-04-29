@@ -125,39 +125,53 @@ int main(void)
     // Stack sizes are manually fine tuned
 
 //    if(xTaskCreate(NFCTask, (const portCHAR *)"NFC",
-//               500, 0, 1, 0) != pdTRUE)
+//               100, 0, 1, 0) != pdTRUE)
 //    {
 //        cust_print("\nNFC Task Creation Failed");
 //    }
 //    else        cust_print("\nNFC Task Created");
 
-//    if(xTaskCreate(EPaper_Keypad_Task, (const portCHAR *)"EPaper_Keypad",
-//               500, 0, 1, 0) != pdTRUE)
-//    {
-//        cust_print("\nEPaper_Keypad Task Creation Failed");
-//    }
-//    else        cust_print("\nEPaper_Keypad Task Created");
+    if(xTaskCreate(EPaper_Keypad_Task, (const portCHAR *)"EPaper_Keypad",
+               100, 0, 1, 0) != pdTRUE)
+    {
+        cust_print("\nEPaper_Keypad Task Creation Failed");
+    }
+    else        cust_print("\nEPaper_Keypad Task Created");
 
-//    if(xTaskCreate(LoadCellTask, (const portCHAR *)"LoadCell",
-//               500, 0, 1, 0) != pdTRUE)
-//    {
-//        cust_print("\nLoadCell Task Creation Failed");
-//    }
-//    else        cust_print("\nLoadCell Task Created");
+    if(xTaskCreate(LoadCellTask, (const portCHAR *)"LoadCell",
+               100, 0, 1, 0) != pdTRUE)
+    {
+        cust_print("\nLoadCell Task Creation Failed");
+    }
+    else        cust_print("\nLoadCell Task Created");
 
     if(xTaskCreate(OutputIndicatorsTask, (const portCHAR *)"OutputIndicators",
-               500, 0, 1, 0) != pdTRUE)
+               100, 0, 1, 0) != pdTRUE)
     {
         cust_print("\nOutputIndicators Task Creation Failed");
     }
     else        cust_print("\nOutputIndicators Task Created");
 
-    if(xTaskCreate(BME280Task, (const portCHAR *)"BME280",
+    if(xTaskCreate(LuxTask, (const portCHAR *)"Lux",
+               100, 0, 1, 0) != pdTRUE)
+    {
+        cust_print("\nLux Task Creation Failed");
+    }
+    else        cust_print("\nLux Task Created");
+
+    if(xTaskCreate(GasTask, (const portCHAR *)"Gas",
                500, 0, 1, 0) != pdTRUE)
     {
-        cust_print("\nBME280 Task Creation Failed");
+        cust_print("\nGas Task Creation Failed");
     }
-    else        cust_print("\nBME280 Task Created");
+    else        cust_print("\nGas Task Created");
+
+//    if(xTaskCreate(PIRTask, (const portCHAR *)"PIR",
+//               500, 0, 1, 0) != pdTRUE)
+//    {
+//        cust_print("\nPIR Task Creation Failed");
+//    }
+//    else        cust_print("\nPIR Task Created");
 
 //    if(xTaskCreate(Log_Task, (const portCHAR *)"Log",
 //                400, 0, 1, NULL) != pdTRUE)
@@ -215,32 +229,19 @@ int main(void)
 //    }
 //    else        cust_print("\nKeyPadTask Task Created");
 
-//    if(xTaskCreate(LuxTask, (const portCHAR *)"Lux",
-//               500, 0, 1, 0) != pdTRUE)
-//    {
-//        cust_print("\nLux Task Creation Failed");
-//    }
-//    else        cust_print("\nLux Task Created");
-
-//    if(xTaskCreate(GasTask, (const portCHAR *)"Gas",
-//               500, 0, 1, 0) != pdTRUE)
-//    {
-//        cust_print("\nGas Task Creation Failed");
-//    }
-//    else        cust_print("\nGas Task Created");
-
-//    if(xTaskCreate(PIRTask, (const portCHAR *)"PIR",
-//               500, 0, 1, 0) != pdTRUE)
-//    {
-//        cust_print("\nPIR Task Creation Failed");
-//    }
-//    else        cust_print("\nPIR Task Created");
-
 
     vTaskStartScheduler();
     return 0;
 }
 
+void vApplicationStackOverflowHook( TaskHandle_t pxTask, char *pcTaskName )
+{
+    (void) pcTaskName;
+    (void) pxTask;
+
+    while(1);
+
+}
 
 /*  ASSERT() Error function
  *

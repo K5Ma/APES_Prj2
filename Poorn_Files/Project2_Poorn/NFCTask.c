@@ -187,6 +187,8 @@ void NFCTask(void *pvParameters)
     {
         vTaskDelay(NFC_Polling_Timems);
 
+//        taskENTER_CRITICAL();
+
         if(NFC_Error == true)
         {
             //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send NFC Failure LOG to BB

@@ -133,3 +133,6 @@ Poorn's Readme File
 
 >*Minor Updates*
 
+**********v2.2********** (4/28/2019)
+
+>*Minor Updates and Tests Performed*
