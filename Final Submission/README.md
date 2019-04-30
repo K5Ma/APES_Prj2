@@ -2,7 +2,9 @@
 
 This is Project 2 Developed for the Course AESD (Spring 19) by Khalid AlAwadhi and Poorn Mehta
 
-The relevant Documentation Links Can be found in Final Report
+The relevant Documentation Links Can be found in Final Report.
+
+Our workspaces contain all the needed files. 
 
 *****Description of Files*****
 
