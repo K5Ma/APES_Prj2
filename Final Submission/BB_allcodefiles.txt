@@ -1,0 +1,2806 @@
+/*
+ * My_UART_BB.h
+ *
+ *  Created on: Apr 20, 2019
+ *      Author: Khalid AlAwadhi
+ *
+ *  # ALL INFO CAN BE FOUND IN THE .h FILE #
+ */
+#include "My_UART_BB.h"
+
+//Standard includes
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <strings.h>
+#include <termios.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
+#include <sys/signal.h>
+
+//My includes
+#include "Global_Defines.h"
+#include "Master_Functions.h"
+
+
+/* Global Variables */
+extern struct sigaction UART1_RX_SignalAction;
+extern char Start_RX[1];
+extern UART_Struct *BB_UART1;
+extern bool POLL_RX;
+
+
+
+
+void UART1_RX_Signal_Handler(int Status)
+{		
+	if(!POLL_RX)
+	{
+		if( ( read(BB_UART1->fd, Start_RX, 1) ) == -1)
+		{
+			printf("> Error: Could not read from UART1\n");
+		}
+
+		if( (strcmp(Start_RX, START_CMD)) == 0 )
+		{
+			POLL_RX = true;
+		}
+	}
+}
+
+
+int8_t Init_UARTx(UART_Struct *UART)
+{
+	/* Error handling */
+	if(UART == NULL)
+	{
+		printf("> Error: UART structure not initialized\n");
+		return -1; 
+	}
+	if(UART->UART_ID > 3)
+	{
+		printf("> Error: UART port must be 0-3\n");
+		return -1;
+	}
+	
+	/* Get chosen UART path */
+	char UART_Path[13] = "/dev/ttyO";
+	char UART_PortNum[2];
+	snprintf(UART_PortNum, 2, "%u", UART->UART_ID);
+	strcat(UART_Path, UART_PortNum);
+	
+	struct termios UART_Port;
+	
+	/* Open UART port */
+	UART->fd = open(UART_Path, O_RDWR | O_NOCTTY);
+	if(UART->fd < 0)
+	{
+		printf("> Error: Failed to open UART port %s\n", UART_PortNum);
+		return -1; 
+	}
+	
+	/* For UART1 we enable RX signal interruppts (Bluetooth module) */
+	if(UART->UART_ID == UART1)
+	{
+		/* Set RX signal interruppts */
+		UART1_RX_SignalAction.sa_handler = UART1_RX_Signal_Handler;
+		UART1_RX_SignalAction.sa_flags = 0;
+		UART1_RX_SignalAction.sa_restorer = NULL;
+		sigaction(SIGIO, &UART1_RX_SignalAction, NULL);
+		fcntl(UART->fd, F_SETFL, 0);
+		fcntl(UART->fd, F_SETOWN, getpid());
+		fcntl(UART->fd, F_SETFL,  O_ASYNC); 
+	}
+	
+	/* Zero the structure location */
+	bzero(&UART_Port, sizeof(UART_Port));
+
+	/* Set flags */
+	if( (cfsetispeed(&UART_Port, UART->BaudRate)) == -1 )
+	{
+		printf("> Error: Could net set input BaudRate => UART port %s\n", UART_PortNum);
+	}
+	if( (cfsetospeed(&UART_Port, UART->BaudRate)) == -1 )
+	{
+		printf("> Error: Could net set output BaudRate => UART port %s\n", UART_PortNum);
+	}
+	
+	UART_Port.c_cflag |= CS8 | CLOCAL | CREAD;
+	UART_Port.c_iflag = IGNPAR | ICRNL;
+	UART_Port.c_oflag = 0;
+	UART_Port.c_lflag = 0;
+
+	/* Read function behavior */
+	UART_Port.c_cc[VTIME] = 0;
+	UART_Port.c_cc[VMIN]  = 1;
+
+	/* Clean the line and set the attributes */
+	tcflush(UART->fd, TCIFLUSH);
+	tcsetattr(UART->fd, TCSANOW, &UART_Port);
+	return 0;
+}
+
+
+
+int8_t Close_UARTx(UART_Struct *UART)
+{
+	/* Error handling */
+	if(UART == NULL)
+	{
+		printf("> Error: UART structure not initialized\n");
+		return -1;
+	}
+	
+	close(UART->fd);
+	return 0;
+}
+
+
+
+int8_t Send_String_UARTx(UART_Struct *UART, char *TX_String)
+{
+	/* Error handling */
+	if(UART == NULL)
+	{
+		printf("> Error: UART structure not initialized\n");
+		return -1;
+	}
+	
+	if(write(UART->fd, TX_String, strlen(TX_String)) == -1)
+	{
+		printf("> Error: Could not write '%s' to UART %u\n", TX_String, UART->UART_ID);
+		return -1;
+	}
+	return 0;
+}
+
+
+
+//bool Send_StructBuffer_UARTx(UART_Struct *UART, uint8_t* StructToSend)
+//{
+//	/* Error handling */
+//	if(UART == NULL)
+//	{
+//		printf("> Error: UART structure not initialized\n");
+//		return false;
+//	}
+//	
+//	uint16_t SizeOfStruct;
+//
+//	/* Get what structure it is, based on the first byte */
+//	switch( StructToSend[0] )
+//	{
+//		case KE_B2T_Struct_ID:
+//			Log_Msg(BB_TivaComm, "DEBUG", "STRUCTURE TO SEND IS KE_B2T_Struct", 0, LOCAL_ONLY);
+//			SizeOfStruct = sizeof(KE_B2T_Struct);
+//			break;
+//
+//
+//		default:
+//			Log_Msg(BB_TivaComm, "ERROR", "Send_StructBuffer_UARTx() aborted - unknown structure!", 0, LOCAL_ONLY);
+//			return false;
+//	}
+//
+//	uint16_t i;
+//	int16_t BytesRead;		//Stores bytes read or error
+//	char RX_BYTE[1];		//Stores the RX byte
+//	
+//	
+//	if(write(UART->fd, StructToSend, SizeOfStruct) == -1)
+//	{
+//		printf("> Error: Could not send struct to UART1\n");
+//		return false;
+//	}
+//
+//	
+////	
+////	/* Loop for each element */
+////	for(i = 0; i < SizeOfStruct; i++)
+////	{
+//////		/* Wait for a response => '#' before the next TX - Blocking RX poll */
+//////		BytesRead = read(UART->fd,(void*)RX_BYTE, 1);
+//////		
+//////		/* Error check */
+//////		if(BytesRead == -1)
+//////		{
+//////		//	Log_Msg(BB_TivaComm, "ERROR", "Could not finish sending struct to UART1! Exiting Send_Struct_UARTx()", 0, LOGGER_AND_LOCAL);
+//////			return false;
+//////		}
+//////		else
+//////		{
+//////			printf("> Read '%s' from UART %u\n", RX_BYTE, UART->UART_ID);
+//////		}
+////		
+////		/* TX one byte at a time, check for errors */
+////		if(write(UART->fd, StructToSend, 1) == -1)
+////		{
+////		//	Log_Msg(BB_TivaComm, "ERROR", "Could not finish sending struct to UART1! Exiting Send_Struct_UARTx()", 0, LOGGER_AND_LOCAL);
+////			return false;
+////		}
+////		else
+////		{
+////			/* TX was successful, increment pointer */
+////			StructToSend++;
+////		//	printf("> DEBUG => Sent Byte!\n");
+////		}
+////
+////		
+////	}
+//	
+//	return true;
+//}
+
+//bool Send_Struct_UARTx(UART_Struct *UART, TivaBB_MsgStruct StructToSend)
+//{
+//	/* Error handling */
+//	if(UART == NULL)
+//	{
+//		printf("> Error: UART structure not initialized\n");
+//		return false;
+//	}
+//	
+//	/* Create an array of bytes to fit the given struct */
+//	unsigned char buffer[sizeof(StructToSend)+1];
+//	
+//	/* Copy the contents of our struct to the char array */
+//	memcpy( buffer, &StructToSend, sizeof(StructToSend) );
+//	
+//	/* Create a pointer that will iterate through the array and TX to Tiva side */
+//	unsigned char* ptr = &buffer;
+//	
+//	int16_t BytesRead;		//Stores bytes read or error
+//	char RX_BYTE[1];		//Stores the RX byte
+//	
+//	/* Loop for each element */
+//	for(uint8_t i = 0; i < sizeof(StructToSend); i++)
+//	{
+//		/* TX one byte at a time, check for errors */
+//		if(write(UART->fd, ptr, 1) == -1)
+//		{
+//			printf("> Error: Could not finish sending struct to UART %u\n> Exiting Send_Struct_UARTx()", UART->UART_ID);
+//			return false;
+//		}
+//		else
+//		{
+//			/* TX was successful, increment pointer */
+//			ptr++;
+//		//	printf("> DEBUG => Sent Byte!\n");
+//		}
+//		
+//		/* Wait for a response => '#' before the next TX - Blocking RX poll */
+//		BytesRead = read(UART->fd,(void*)RX_BYTE, 1);
+//		
+//		/* Error check */
+//		if(BytesRead == -1)
+//		{
+//			printf("> Error: Could not finish sending struct to UART %u\n> Exiting Send_Struct_UARTx()", UART->UART_ID);
+//			return false;
+//		}
+//		else
+//		{
+//		//	printf("> Read '%s' from UART %u\n", RX_BYTE, UART->UART_ID);
+//		}
+//	}
+//	
+//	/* After all structure bytes are sent, send END => '!' */
+//	if(write(UART->fd, (void *)"!", 1) == -1)
+//	{
+//		printf("> Error: Could not finish sending struct to UART %u\n> Exiting Send_Struct_UARTx()", UART->UART_ID);
+//		return false;
+//	}
+//	else
+//	{
+//		return true;
+//	}
+//}
+
+
+
+int16_t Read_UARTx(UART_Struct *UART, char *RX_String)
+{
+	/* Error handling */
+	if(UART == NULL)
+	{
+		printf("> Error: UART structure not initialized\n");
+		return -1;
+	}
+	
+	int16_t BytesRead;
+	while(1)
+	{
+		BytesRead = read(UART->fd,(void*)RX_String, strlen(RX_String));
+		
+		if(BytesRead == -1)
+		{
+			printf("> Error: Could not read from UART %u\n", UART->UART_ID);
+			return -1;
+		}
+		
+		for(uint8_t i = 0; i < strlen(RX_String); i++)
+		{
+			if(RX_String[i] == '\n')
+			{
+				RX_String[i] = '\0';
+				printf("Read '%s' from UART %u\n", RX_String, UART->UART_ID);
+				return BytesRead;
+			}
+		}
+	}
+}/*
+ * LoadCell_Thread.c
+ *
+ *  Created on: Apr 28, 2019
+ *      Author: Khalid AlAwadhi
+ */
+
+
+#include "LoadCell_Thread.h"
+
+//Standard includes
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <mqueue.h>
+#include <unistd.h>
+#include <errno.h>
+
+//My includes
+#include "Global_Defines.h"
+#include "Master_Functions.h"
+
+
+
+/* Global Variables */
+OI_B2T_Struct OI_Tx;			//Sent to Tiva
+//extern char Check_Code[6];
+extern bool Person_ID; //0: Poorn, 1: Khalid
+
+
+
+void * LoadCellThread(void * args)
+{
+	/* Create the LoadCell Thread POSIX queue */
+	mqd_t MQ;											//Message queue descriptor
+
+	/* Delete any previous LoadCell POSIX Qs */
+	if(mq_unlink(LOADCELL_POSIX_Q) != 0)
+	{
+		Log_Msg(BB_LoadCell, "ERROR", "mq_unlink()", errno, LOCAL_ONLY);
+	}
+	else
+	{
+		Log_Msg(BB_LoadCell, "INFO", "Previous LoadCell queue was found and successfully unlinked!", 0, LOCAL_ONLY);
+	}
+	
+	
+	/* Initialize the queue attributes */
+	struct mq_attr attr;
+	attr.mq_flags = 0;                                  /* Flags: 0 or O_NONBLOCK */
+	attr.mq_maxmsg = 10;                                /* Max. # of messages on queue */
+	attr.mq_msgsize = sizeof(LC_T2B_Struct);            /* Max. message size (bytes) */
+	attr.mq_curmsgs = 0;                                /* # of messages currently in queue */
+
+
+	/* Create the LoadCell Thread queue to get structs sent from Tiva */
+	MQ = mq_open(LOADCELL_POSIX_Q, O_CREAT | O_RDONLY | O_CLOEXEC, 0666, &attr);
+	if(MQ == (mqd_t) -1)
+	{
+		Log_Msg(BB_LoadCell, "FATAL", "mq_open()", errno, LOGGER_AND_LOCAL);
+	}
+	
+	
+	
+	/* Struct to hold any recivied messages */
+	LC_T2B_Struct Got_LC_RX;
+	
+	
+	while(1)
+	{
+		/* Keep polling for LC structs */
+		if ( (mq_receive(MQ, &Got_LC_RX, sizeof(LC_T2B_Struct), NULL) ) != -1 )
+		{
+		//	Log_Msg(BB_LoadCell, "DEBUG", "GOT LC STRUCT FROM TIVA!", 0, LOCAL_ONLY);
+			
+			
+			/* Call LoadCell funciton */
+			if (!LC_Function(Got_LC_RX))
+			{
+				Send_OIStruct_ToTiva(OI_Tx);
+			}
+		}
+	}
+	
+	
+	Log_Msg(BB_LoadCell, "INFO", "LoadCell Thread has terminated successfully and will now exit", 0, LOGGER_AND_LOCAL);
+	
+	return 0;
+}
+
+
+
+bool LC_Function(LC_T2B_Struct LC_Rx)
+{
+	uint8_t i, valid;
+	char tstr[50], hr[2];
+	uint8_t hours;
+	
+	for(i = 0; i < 20; i ++)
+	{
+        if((LC_Rx.LC_SamplesArraymv[i] >= LC_VerificationLowmv) && (LC_Rx.LC_SamplesArraymv[i] <= LC_VerificationHighmv))		valid += 1;
+        else		valid = 0;
+        
+		if(valid >= LC_ConsecutiveVerificationNeeded)
+		{
+			Log_Msg(BB_LoadCell, "INFO", "Samples Verified... Stage 3 Succeeded", 0, LOGGER_AND_LOCAL);
+			OI_Tx.OI_Data |= 1;
+			
+			if(Person_ID == true) OI_Tx.OI_Data |= (1 << 3);
+			
+			return false;
+		}	
+	}
+	
+	Log_Msg(BB_LoadCell, "ERROR", "Samples are outside the Range... Stage 3 Failed", 0, LOGGER_AND_LOCAL);
+	return true;
+}
+
+
+
+void Send_OIStruct_ToTiva(OI_B2T_Struct StructToSend)
+{
+	StructToSend.ID = OI_B2T_Struct_ID;
+	StructToSend.Src = BB_LoadCell; 
+	
+	/* Create an array of bytes to fit the given struct */
+	uint8_t Buffer_Struct[sizeof(StructToSend)+1];
+
+	/* Copy the contents of our struct to the char array */
+	memcpy(Buffer_Struct, &StructToSend, sizeof(StructToSend));
+
+				
+	/* Send Struct to TivaComm POSIX Q */
+	mqd_t MQ;						//Message queue descriptor
+		
+	/* Open the TivaComm Thread POSIX queue - write only */
+	MQ = mq_open(TIVACOMM_POSIX_Q, O_WRONLY | O_CLOEXEC);		//NOTE: IF YOU GET AN 'O_CLOEXEC' UNDEFINED ERROR ADD -D_GNU_SOURCE TO COMPILER OPTIONS
+	
+	
+	char ErrMsg[MSGSTR_SIZE];								//Temp variable
+	
+	
+	/* Error check */
+	if(MQ == (mqd_t) -1)
+	{
+		snprintf(ErrMsg, MSGSTR_SIZE, "Send_OIStruct_ToTiva() => mq_open(), attempted to open TivaComm queue");
+		Log_Msg(BB_LoadCell, "ERROR", ErrMsg, errno, LOGGER_AND_LOCAL);
+		return;
+	}
+	
+	/* Send Struct to POSIX queue */
+	if(mq_send(MQ, Buffer_Struct, sizeof(StructToSend), 0) != 0)
+	{
+		snprintf(ErrMsg, MSGSTR_SIZE, "Send_OIStruct_ToTiva() => mq_send(), attempted to send buffer struct to TivaComm queue");
+		Log_Msg(BB_LoadCell, "ERROR", ErrMsg, errno, LOGGER_AND_LOCAL);
+		return;
+	}
+	
+	if(mq_close(MQ) != 0)
+	{
+		Log_Msg(BB_LoadCell, "ERROR", "Send_OIStruct_ToTiva() => mq_close(), attempted to close TivaComm queue", errno, LOGGER_AND_LOCAL);
+	}
+}/*
+ * KeypadEpaper_Thread.h
+ *
+ *  Created on: Apr 28, 2019
+ *      Author: Khalid AlAwadhi
+ */
+
+#ifndef KEYPADEPAPER_THREAD_H_
+#define KEYPADEPAPER_THREAD_H_
+
+#include <stdint.h>
+#include "Global_Defines.h"
+
+
+/**************************************************************************************************************
+ * USAGE: This function contains all what the KeypadEpaper pThread will do.
+ *
+ * PARAMETERS:
+ *            - NONE
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void * KeypadEpaperThread(void * args);
+
+
+
+/**************************************************************************************************************
+ * USAGE: This function confirms the code user has inputted on Tiva side.
+ *
+ * PARAMETERS:
+ *            - KE_T2B_Struct EK_Rx => The struct received
+ *
+ * RETURNS: Success => 0
+ *          Failure => 1
+ **************************************************************************************************************/
+bool EK_Function(KE_T2B_Struct EK_Rx);
+
+
+
+/**************************************************************************************************************
+ * USAGE: This function converts the struct into a byte array and then send it to the TivaComm pThread to TX. 
+ *
+ * PARAMETERS:
+ *            - LC_B2T_Struct StructToSend => The structure to send 
+ * 
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void Send_LCStruct_ToTiva(LC_B2T_Struct StructToSend);
+
+
+
+#endif /* KEYPADEPAPER_THREAD_H_ */
+/*
+ * Logger_Thread.h
+ *
+ *  Created on: Apr 21, 2019
+ *      Author: Khalid AlAwadhi
+ */
+#ifndef LOGGER_THREAD_H_
+#define LOGGER_THREAD_H_
+
+#include "Global_Defines.h"
+
+
+/**************************************************************************************************************
+ * USAGE: This function contains all what the Logger pThread will do.
+ *
+ * PARAMETERS:
+ *            - NONE
+ *
+ * RETURNS: NONE
+ *
+ **************************************************************************************************************/
+void * LoggerThread(void * args);
+
+
+
+/**************************************************************************************************************
+ * USAGE: This function will be called initially when the Logger Thread is first initialized.
+ *
+ * PARAMETERS:
+ *            - char* LogFilePath => Path to the log file
+ *
+ * RETURNS: NONE
+ *
+ **************************************************************************************************************/
+void LogFile_Init(char* LogFilePath);
+
+
+
+/**************************************************************************************************************
+ * USAGE: This function will log messages received by the Logger Thread. It will decode the message and
+ *        specify the destination and source it came from and log it to a file.
+ *
+ * PARAMETERS:
+ *            - char* LogFilePath => Path to the log file
+ *            - LogMsg_Struct* Message => The message structure to decode and log
+ *
+ * RETURNS: NONE
+ *
+ **************************************************************************************************************/
+void LogFile_Log(char* LogFilePath, LogMsg_Struct* Message);
+
+
+
+
+#endif /* LOGGER_THREAD_H_ */
+/*
+ * KeypadEpaper_Thread.c
+ *
+ *  Created on: Apr 28, 2019
+ *      Author: Khalid AlAwadhi
+ */
+
+#include "KeypadEpaper_Thread.h"
+
+//Standard includes
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <mqueue.h>
+#include <unistd.h>
+#include <errno.h>
+
+//My includes
+#include "Global_Defines.h"
+#include "Master_Functions.h"
+
+
+
+/* Global Variables */
+LC_B2T_Struct LC_Tx;			//Sent to Tiva if applicable
+extern char Check_Code[6];
+extern bool Person_ID; //0: Poorn, 1: Khalid
+
+
+void * KeypadEpaperThread(void * args)
+{
+	/* Create the KeypadEpaper Thread POSIX queue */
+	mqd_t MQ;											//Message queue descriptor
+
+	/* Delete any previous KeypadEpaper POSIX Qs */
+	if(mq_unlink(KEYPADEPAPER_POSIX_Q) != 0)
+	{
+		Log_Msg(BB_KeypadEpaper, "ERROR", "mq_unlink()", errno, LOCAL_ONLY);
+	}
+	else
+	{
+		Log_Msg(BB_KeypadEpaper, "INFO", "Previous KeypadEpaper queue was found and successfully unlinked!", 0, LOCAL_ONLY);
+	}
+	
+	
+	/* Initialize the queue attributes */
+	struct mq_attr attr;
+	attr.mq_flags = 0;                                  /* Flags: 0 or O_NONBLOCK */
+	attr.mq_maxmsg = 10;                                /* Max. # of messages on queue */
+	attr.mq_msgsize = sizeof(KE_T2B_Struct);            /* Max. message size (bytes) */
+	attr.mq_curmsgs = 0;                                /* # of messages currently in queue */
+
+
+	/* Create the KeypadEpaper Thread queue to get structs sent from Tiva */
+	MQ = mq_open(KEYPADEPAPER_POSIX_Q, O_CREAT | O_RDONLY | O_CLOEXEC, 0666, &attr);
+	if(MQ == (mqd_t) -1)
+	{
+		Log_Msg(BB_KeypadEpaper, "FATAL", "mq_open()", errno, LOGGER_AND_LOCAL);
+	}
+	
+	/* Struct to hold any recivied messages */
+	KE_T2B_Struct Got_KET2B_RX;
+	
+	while(1)
+	{
+		/* Keep polling for KE structs */
+		if ( (mq_receive(MQ, &Got_KET2B_RX, sizeof(KE_T2B_Struct), NULL) ) != -1 )
+		{
+		//	Log_Msg(BB_KeypadEpaper, "DEBUG", "GOT KE_T2B STRUCT FROM TIVA!", 0, LOCAL_ONLY);
+			
+			
+			/* Call EK funciton */
+			if (!EK_Function(Got_KET2B_RX))
+			{
+				Send_LCStruct_ToTiva(LC_Tx);
+			}
+		}
+	}
+	
+	
+	Log_Msg(BB_KeypadEpaper, "INFO", "KeypadEpaper Thread has terminated successfully and will now exit", 0, LOGGER_AND_LOCAL);
+	
+	return 0;
+}
+
+
+
+bool EK_Function(KE_T2B_Struct EK_Rx)
+{
+//	printf("\n------>>>>>> Code Was Set to: %c%c%c%c%c%c\n", Check_Code[0], Check_Code[1], Check_Code[2], Check_Code[3], Check_Code[4], Check_Code[5]);
+	
+	uint8_t i;
+	
+	Log_Msg(BB_KeypadEpaper, "INFO", "Checking Code...", 0, LOGGER_AND_LOCAL);
+	
+//	for(i = 0; i < 6; i ++)
+//	{
+//		printf("DEBUG: %c | %u", EK_Rx.KeyPad_Code[i], EK_Rx.KeyPad_Code[i]);
+//	}
+//	
+	
+//	printf("\n------>>>>>> Actual Reception is:");
+	
+	for(i = 0; i < 6; i ++)
+	{
+	//	printf("%c",EK_Rx.KeyPad_Code[i]);
+		if(EK_Rx.KeyPad_Code[i] != Check_Code[i])		break;
+	}
+		
+	if(i != 6)
+	{
+		Log_Msg(BB_KeypadEpaper, "ERROR", "Incorrect Code Entered... Stage 2 Failed", 0, LOGGER_AND_LOCAL);
+		return true;
+	}
+	else
+	{
+		LC_Tx.LC_Poll = true;
+		Log_Msg(BB_KeypadEpaper, "INFO", "Code Verified... Stage 2 Succeeded", 0, LOGGER_AND_LOCAL);
+		return false;
+	}
+}
+
+
+
+void Send_LCStruct_ToTiva(LC_B2T_Struct StructToSend)
+{
+	StructToSend.ID = LC_B2T_Struct_ID;
+	StructToSend.Src = BB_KeypadEpaper; 
+	
+	/* Create an array of bytes to fit the given struct */
+	uint8_t Buffer_Struct[sizeof(StructToSend)+1];
+
+	/* Copy the contents of our struct to the char array */
+	memcpy(Buffer_Struct, &StructToSend, sizeof(StructToSend));
+
+
+	/* Send Struct to TivaComm POSIX Q */
+	mqd_t MQ;						//Message queue descriptor
+		
+	/* Open the TivaComm Thread POSIX queue - write only */
+	MQ = mq_open(TIVACOMM_POSIX_Q, O_WRONLY | O_CLOEXEC);		//NOTE: IF YOU GET AN 'O_CLOEXEC' UNDEFINED ERROR ADD -D_GNU_SOURCE TO COMPILER OPTIONS
+	
+	
+	char ErrMsg[MSGSTR_SIZE];								//Temp variable
+	
+	
+	/* Error check */
+	if(MQ == (mqd_t) -1)
+	{
+		snprintf(ErrMsg, MSGSTR_SIZE, "Send_LCStruct_ToTiva() => mq_open(), attempted to open TivaComm queue");
+		Log_Msg(BB_KeypadEpaper, "ERROR", ErrMsg, errno, LOGGER_AND_LOCAL);
+		return;
+	}
+	
+	/* Send Struct to POSIX queue */
+	if(mq_send(MQ, Buffer_Struct, sizeof(StructToSend), 0) != 0)
+	{
+		snprintf(ErrMsg, MSGSTR_SIZE, "Send_LCStruct_ToTiva() => mq_send(), attempted to send buffer struct to TivaComm queue");
+		Log_Msg(BB_KeypadEpaper, "ERROR", ErrMsg, errno, LOGGER_AND_LOCAL);
+		return;
+	}
+	
+	if(mq_close(MQ) != 0)
+	{
+		Log_Msg(BB_KeypadEpaper, "ERROR", "Send_LCStruct_ToTiva() => mq_close(), attempted to close TivaComm queue", errno, LOGGER_AND_LOCAL);
+	}
+}
+/*
+ * NFC_Thread.h
+ *
+ *  Created on: Apr 28, 2019
+ *      Author: Khalid AlAwadhi
+ */
+
+#ifndef NFC_THREAD_H_
+#define NFC_THREAD_H_
+
+#include <stdint.h>
+#include "Global_Defines.h"
+
+/**************************************************************************************************************
+ * USAGE: This function contains all what the NFC pThread will do.
+ *
+ * PARAMETERS:
+ *            - NONE
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void * NFCThread(void * args);
+
+
+
+/**************************************************************************************************************
+ * USAGE: This function handles recieved NFC structs from Tiva.
+ *
+ * PARAMETERS:
+ *            - NFC_T2B_Struct NFC_Rx => The struct recieved 
+ *
+ * RETURNS: Success => 0
+ *          Failure => 1
+ **************************************************************************************************************/
+bool NFC_Function(NFC_T2B_Struct NFC_Rx);
+
+
+
+/**************************************************************************************************************
+ * USAGE: This function converts the struct into a byte array and then send it to the TivaComm pThread to TX. 
+ *
+ * PARAMETERS:
+ *            - KE_B2T_Struct StructToSend => The structure to send 
+ * 
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void Send_KEStruct_ToTiva(KE_B2T_Struct StructToSend);
+
+
+
+#endif /* NFC_THREAD_H_ */
+#ifndef GLOBAL_DEFINES_H_
+#define GLOBAL_DEFINES_H_
+
+#include <stdint.h>
+#include <stdbool.h>
+
+
+/////////////////////////////////////// COMMON BETWEEN TIVA AND BB ///////////////////////////////////////////////////////////
+/***************************************
+ *   Current Program Version define    *
+ ***************************************/
+#define CURRENT_VER 				"2.0"
+
+
+/***************************************
+ *  Task and Thread Numbering Enum:    *
+ *  Used for source and destination    *
+ ***************************************/
+typedef enum
+{
+	/* Tiva Sources */
+	T_Main = 1,
+	T_BBComm = 2,
+	T_NFC = 3,
+	T_KeypadEpaper = 4,
+	T_LoadCell = 5,
+	T_Lux = 6,
+	T_Servo = 7,
+	T_SpeakJet = 8,
+	T_Outputs = 9,
+	T_BTLink = 16,
+	/* BeagleBone Sources */
+	BB_Main = 10,
+	BB_Logger = 11,
+	BB_TivaComm = 12,
+	BB_NFC = 13,
+	BB_KeypadEpaper = 14,
+	BB_LoadCell = 15
+} Sources;
+
+
+/*****************************************
+ * UART Bluetooth CMDs used in the code  *
+ * logic to know where we are when TXing *
+ * or RXing                              *
+ *****************************************/
+#define START_CMD                  "?"
+#define START_CMD_CHAR             '?'
+#define CONFIRM_CMD                "#"
+#define END_CMD                    "!"
+#define END_CMD_CHAR               '!'
+
+
+/*****************************************
+ * String size defines                   *
+ *****************************************/
+//This define should be used when sizing
+//strings that will be used to store
+//messages in the system. Helps keeps
+//things consistent
+#define MSGSTR_SIZE                 150
+#define LOG_SIZE                    20
+#define SRC_SIZE                    21
+
+
+/***************************************
+ *     Max Structure size              *
+ ***************************************/
+#define MAX_STRUCT_SIZE				220
+
+
+/***************************************
+ *     Struct ID Enum                  *
+ ***************************************/
+typedef enum
+{
+	LogMsg_Struct_ID = 1,
+	NFC_T2B_Struct_ID = 2,
+	KE_B2T_Struct_ID = 3,
+	KE_T2B_Struct_ID = 4,
+	LC_B2T_Struct_ID = 5,
+	LC_T2B_Struct_ID = 6,
+	OI_B2T_Struct_ID = 7
+} Struct_ID;
+
+
+/***************************************
+ *  Struct used by Logger thread/task  *
+ ***************************************/
+typedef struct
+{
+	uint8_t ID;
+	uint8_t Src;
+	char LogLevel[LOG_SIZE];		//Expected values: INFO | WARNING | ERROR | CRITICAL | FATAL
+	char Msg[MSGSTR_SIZE];
+} LogMsg_Struct;
+
+/***************************************
+ *  Struct used by NFC thread/task     *
+ *  (Tiva to BB)                       *
+ ***************************************/
+typedef struct
+{
+    uint8_t ID;
+    uint8_t Src;
+    uint8_t NFC_Tag_ID_Array[4];
+} NFC_T2B_Struct;
+
+
+/***************************************
+ *  Struct used by NFC pThread /       *
+ *  KeypadEpaper task (BB to Tiva)     *
+ ***************************************/
+typedef struct
+{
+    uint8_t ID;
+    uint8_t Src;
+    bool KeyPad_Poll;
+    bool EP_Update;
+    char Image_Name[10];
+} KE_B2T_Struct;
+
+
+/***************************************
+ *  Struct used by KeypadEpaper task / *
+ *  pThread (Tiva to BB)               *
+ ***************************************/
+typedef struct
+{
+    uint8_t ID;
+    uint8_t Src;
+    uint8_t KeyPad_Code[6];
+} KE_T2B_Struct;
+
+
+/***************************************
+ *  Struct used by KeypadEpaper pThread*
+ *   / LoadCell task (BB to Tiva)      *
+ ***************************************/
+typedef struct
+{
+    uint8_t ID;
+    uint8_t Src;
+    bool LC_Poll;
+} LC_B2T_Struct;
+
+/***************************************
+ *  Struct used by LoadCell task/thread*
+ *  (Tiva to BB)                       *
+ ***************************************/
+typedef struct
+{
+    uint8_t ID;
+    uint8_t Src;
+    uint16_t LC_SamplesArraymv[20];
+} LC_T2B_Struct;
+
+
+/***************************************
+ *  Struct sent from LoadCell pThread  *
+ *  to Outputs Task                    *
+ *  (BB to Tiva)                       *
+ ***************************************/
+typedef struct
+{
+	uint8_t ID;
+    uint8_t Src;
+    uint8_t OI_Data;
+} OI_B2T_Struct;
+
+
+/***************************************
+ *   Log_Msg() Function Parameters:    *
+ *   (found in Master_Functions.h)     *
+ ***************************************/
+#define LOGGER_AND_LOCAL			0x01
+#define LOGGER_ONLY					0x02
+#define LOCAL_ONLY					0x03
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/***************************************
+ *      pThread Argument Structure     *
+ ***************************************/
+typedef struct Pthread_ArgsStruct
+{
+    char LogFile_Path[100];			//Used to store the wanted logfile path
+}Pthread_ArgsStruct;
+
+
+/***************************************
+ *          POSIX Queues               *
+ ***************************************/
+#define MAIN_POSIX_Q                   "/MAIN_PQ"
+#define LOGGER_POSIX_Q                 "/LOGGER_PQ"
+#define TIVACOMM_POSIX_Q               "/TIVACOMM_PQ"
+#define NFC_POSIX_Q                    "/NFC_PQ"
+#define KEYPADEPAPER_POSIX_Q	       "/KEYPADEPAPER_PQ"
+#define LOADCELL_POSIX_Q               "/LOADCELL_PQ"
+
+
+/*****************************************
+ * The define below should be used when  *
+ * initializing a string that will store *
+ * the current system real time using    *
+ * GetRealTime()                         *
+ *****************************************/
+#define TIMESTR_SIZE				26
+
+
+
+#endif /* GLOBAL_DEFINES_H_ */
+/*
+ * TivaComm_Thread.h
+ *
+ *  Created on: Apr 20, 2019
+ *      Author: Khalid AlAwadhi
+ */
+
+#ifndef TIVACOMM_THREAD_H_
+#define TIVACOMM_THREAD_H_
+
+#include <stdint.h>
+
+
+/**************************************************************************************************************
+ * USAGE: This function contains all what the TivaComm pThread will do.
+ *
+ * PARAMETERS:
+ *            - NONE
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void * TivaCommThread(void * args);
+
+
+
+/**************************************************************************************************************
+ * USAGE: This function decodes a given buffer containing buffer data, created the structure needed and then
+ *        send it to the targeted thread. 
+ *
+ * PARAMETERS:
+ *            - uint8_t* StructToDecode => The buffer with structure data to decode 
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void Decode_StructBuffer(uint8_t* StructToDecode);
+
+
+#endif /* TIVACOMM_THREAD_H_ */
+/*
+ * NFC_Thread.c
+ *
+ *  Created on: Apr 28, 2019
+ *      Author: Khalid AlAwadhi
+ */
+
+#include "NFC_Thread.h"
+
+//Standard includes
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <mqueue.h>
+#include <unistd.h>
+#include <errno.h>
+#include <time.h> 
+
+//My includes
+#include "Global_Defines.h"
+#include "Master_Functions.h"
+
+
+
+/* Global Variables */
+extern char Check_Code[6];
+extern bool Person_ID; //0: Poorn, 1: Khalid
+
+KE_B2T_Struct EK_Tx;		//Sent to Tiva if applicable
+
+const char Khalid_Image_1[] = "K1.bmp";
+const char Khalid_Image_2[] = "K2.bmp";
+const char Khalid_Image_3[] = "K3.bmp";
+
+const char Poorn_Image_1[] = "P1.bmp";
+const char Poorn_Image_2[] = "P2.bmp";
+const char Poorn_Image_3[] = "P3.bmp";
+
+const char Khalid_Code_1[] = {'1', '1', '1', '1', '1', '1'};
+const char Khalid_Code_2[] = {'2', '2', '2', '2', '2', '2'};
+const char Khalid_Code_3[] = {'3', '3', '3', '3', '3', '3'};
+
+const char Poorn_Code_1[] = {'C', '3', '1', '3', '*', '*'};
+const char Poorn_Code_2[] = {'#', '4', '0', '3', '1', '9'};
+const char Poorn_Code_3[] = {'2', '5', '0', '7', '9', '7'};
+
+const uint8_t Poorn_NFC_ID[] = {0xB4, 0x58, 0xC3, 0x94};
+
+const uint8_t Khalid_NFC_ID[] = {0xF4, 0x95, 0xA6, 0x94};
+
+
+
+void * NFCThread(void * args)
+{
+	/* Create the NFC Thread POSIX queue */
+	mqd_t MQ;											//Message queue descriptor
+
+	/* Delete any previous NFC POSIX Qs */
+	if(mq_unlink(NFC_POSIX_Q) != 0)
+	{
+		Log_Msg(BB_NFC, "ERROR", "mq_unlink()", errno, LOCAL_ONLY);
+	}
+	else
+	{
+		Log_Msg(BB_NFC, "INFO", "Previous NFC queue was found and successfully unlinked!", 0, LOCAL_ONLY);
+	}
+	
+	
+	
+	/* Initialize the queue attributes */
+	struct mq_attr attr;
+	attr.mq_flags = 0;                                  /* Flags: 0 or O_NONBLOCK */
+	attr.mq_maxmsg = 10;                                /* Max. # of messages on queue */
+	attr.mq_msgsize = sizeof(NFC_T2B_Struct);           /* Max. message size (bytes) */
+	attr.mq_curmsgs = 0;                                /* # of messages currently in queue */
+
+
+	/* Create the NFC Thread queue to get structs sent from Tiva */
+	MQ = mq_open(NFC_POSIX_Q, O_CREAT | O_RDONLY | O_CLOEXEC, 0666, &attr);
+	if(MQ == (mqd_t) -1)
+	{
+		Log_Msg(BB_NFC, "FATAL", "mq_open()", errno, LOGGER_AND_LOCAL);
+	}
+	
+	
+	/* Struct to hold any recivied messages */
+	NFC_T2B_Struct Got_NFC_RX;
+	
+	
+	while(1)
+	{
+		/* Keep polling for NFC structs */
+		if ( (mq_receive(MQ, &Got_NFC_RX, sizeof(NFC_T2B_Struct), NULL) ) != -1 )
+		{
+	//		Log_Msg(BB_NFC, "DEBUG", "GOT NFC STRUCT FROM TIVA!", 0, LOCAL_ONLY);
+			
+			
+			/* Call NFC funciton */
+			if (!NFC_Function(Got_NFC_RX))
+			{
+				Send_KEStruct_ToTiva(EK_Tx);
+			}
+		}
+	}
+	
+	
+	Log_Msg(BB_NFC, "INFO", "NFC Thread has terminated successfully and will now exit", 0, LOGGER_AND_LOCAL);
+	
+	return 0;
+}
+
+
+
+
+
+bool NFC_Function(NFC_T2B_Struct NFC_Rx)
+{
+	static uint8_t i, image_select;
+		
+	for(i = 0; i < 4; i ++)
+	{
+		if(NFC_Rx.NFC_Tag_ID_Array[i] != Poorn_NFC_ID[i])		break;
+	}
+	
+	if(i != 4)
+	{
+		for(i = 0; i < 4; i ++)
+		{
+			if(NFC_Rx.NFC_Tag_ID_Array[i] != Khalid_NFC_ID[i])		break;
+		}
+		if(i != 4)
+		{
+			EK_Tx.KeyPad_Poll = false;
+			EK_Tx.EP_Update = false;
+			Log_Msg(BB_NFC, "ERROR", "Unknown Tag is Presented... Stage 1 Failed", 0, LOGGER_AND_LOCAL);
+			return true;
+		}		
+		else
+		{
+			Log_Msg(BB_NFC, "INFO", "Tag of Khalid is Verified... Stage 1 Succeeded", 0, LOGGER_AND_LOCAL);
+			Person_ID = 1; // Khalid
+			EK_Tx.KeyPad_Poll = true;
+			EK_Tx.EP_Update = true;
+			srand(time(0));
+			image_select = rand() % 3;
+			switch(image_select)
+			{
+				case 0:
+					strncpy(EK_Tx.Image_Name, Khalid_Image_1, sizeof(EK_Tx.Image_Name));
+					for(i = 0; i < 6; i ++)		Check_Code[i] = Khalid_Code_1[i];
+					break;
+				case 1:
+					strncpy(EK_Tx.Image_Name, Khalid_Image_2, sizeof(EK_Tx.Image_Name));
+					for(i = 0; i < 6; i ++)		Check_Code[i] = Khalid_Code_2[i];
+					break;
+				case 2:
+					strncpy(EK_Tx.Image_Name, Khalid_Image_3, sizeof(EK_Tx.Image_Name));
+					for(i = 0; i < 6; i ++)		Check_Code[i] = Khalid_Code_3[i];
+					break;
+				default:
+					break;
+			}
+	//		printf("\n------>>>>>> Code Set to: %c%c%c%c%c%c\n", Check_Code[0], Check_Code[1], Check_Code[2], Check_Code[3], Check_Code[4], Check_Code[5]);
+			return false;
+		}
+	}		
+	else
+	{
+		Log_Msg(BB_NFC, "INFO", "Tag of Poorn is Verified... Stage 1 Succeeded", 0, LOGGER_AND_LOCAL);
+		Person_ID = 0; // Poorn
+		EK_Tx.KeyPad_Poll = true;
+		EK_Tx.EP_Update = true;
+		srand(time(0));
+		image_select = rand() % 3;
+		switch(image_select)
+		{
+			case 0:
+				strncpy(EK_Tx.Image_Name, Poorn_Image_1, sizeof(EK_Tx.Image_Name));
+				for(i = 0; i < 6; i ++)		Check_Code[i] = Poorn_Code_1[i];
+				break;
+			case 1:
+				strncpy(EK_Tx.Image_Name, Poorn_Image_2, sizeof(EK_Tx.Image_Name));
+				for(i = 0; i < 6; i ++)		Check_Code[i] = Poorn_Code_2[i];
+				break;
+			case 2:
+				strncpy(EK_Tx.Image_Name, Poorn_Image_3, sizeof(EK_Tx.Image_Name));
+				for(i = 0; i < 6; i ++)		Check_Code[i] = Poorn_Code_3[i];
+				break;
+			default:
+				break;
+		}
+		return false;
+	}
+}
+
+
+
+void Send_KEStruct_ToTiva(KE_B2T_Struct StructToSend)
+{
+	StructToSend.ID = KE_B2T_Struct_ID;
+	StructToSend.Src = BB_NFC; 
+	
+	/* Create an array of bytes to fit the given struct */
+	uint8_t Buffer_Struct[sizeof(StructToSend)+1];
+
+	/* Copy the contents of our struct to the char array */
+	memcpy(Buffer_Struct, &StructToSend, sizeof(StructToSend));
+
+
+				
+	/* Send Struct to TivaComm POSIX Q */
+	mqd_t MQ;						//Message queue descriptor
+		
+	/* Open the TivaComm Thread POSIX queue - write only */
+	MQ = mq_open(TIVACOMM_POSIX_Q, O_WRONLY | O_CLOEXEC);		//NOTE: IF YOU GET AN 'O_CLOEXEC' UNDEFINED ERROR ADD -D_GNU_SOURCE TO COMPILER OPTIONS
+	
+	
+	char ErrMsg[MSGSTR_SIZE];								//Temp variable
+	
+	
+	/* Error check */
+	if(MQ == (mqd_t) -1)
+	{
+		snprintf(ErrMsg, MSGSTR_SIZE, "Send_KEStruct_ToTiva() => mq_open(), attempted to open TivaComm queue");
+		Log_Msg(BB_NFC, "ERROR", ErrMsg, errno, LOGGER_AND_LOCAL);
+		return;
+	}
+	
+	/* Send Struct to POSIX queue */
+	if(mq_send(MQ, Buffer_Struct, sizeof(StructToSend), 0) != 0)
+	{
+		snprintf(ErrMsg, MSGSTR_SIZE, "Send_KEStruct_ToTiva() => mq_send(), attempted to send buffer struct to TivaComm queue");
+		Log_Msg(BB_NFC, "ERROR", ErrMsg, errno, LOGGER_AND_LOCAL);
+		return;
+	}
+	
+	if(mq_close(MQ) != 0)
+	{
+		Log_Msg(BB_NFC, "ERROR", "Send_KEStruct_ToTiva() => mq_close(), attempted to close TivaComm queue", errno, LOGGER_AND_LOCAL);
+	}
+	
+}
+/*
+ * Logger_Thread.c
+ *
+ *  Created on: Apr 21, 2019
+ *      Author: Khalid AlAwadhi
+ */
+#include "Logger_Thread.h"
+
+//Standard includes
+#include <stdio.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+#include <string.h>
+#include <mqueue.h>
+#include <fcntl.h>
+
+//My includes
+#include "Global_Defines.h"
+#include "Master_Functions.h"
+
+//LATEST
+
+void * LoggerThread(void * args)
+{
+	/* Get the passed arguments */
+	struct Pthread_ArgsStruct *Arguments = args;
+
+	/* Init the log file */
+	LogFile_Init(Arguments->LogFile_Path);
+
+
+	/* Create the Logging Thread POSIX queue */
+	mqd_t MQ;											//Message queue descriptor
+	
+	
+	/* Delete any previous Logger POSIX Qs */
+	if(mq_unlink(LOGGER_POSIX_Q) != 0)
+	{
+		Log_Msg(BB_Logger, "ERROR", "mq_unlink()", errno, LOCAL_ONLY);
+	}
+	else
+	{
+		Log_Msg(BB_Logger, "INFO", "Previous Logger queue was found and successfully unlinked!", 0, LOCAL_ONLY);
+	}
+	
+	
+	/* Initialize the queue attributes */
+	struct mq_attr attr;
+	attr.mq_flags = 0;									/* Flags: 0 or O_NONBLOCK */
+	attr.mq_maxmsg = 50;								/* Max. # of messages on queue */
+	attr.mq_msgsize = sizeof(LogMsg_Struct);			/* Max. message size (bytes) */
+	attr.mq_curmsgs = 0;								/* # of messages currently in queue */
+
+	/* Create the Logger Thread queue to get messages from other pThreads */
+	MQ = mq_open(LOGGER_POSIX_Q, O_CREAT | O_RDONLY | O_CLOEXEC, 0666, &attr);
+	if(MQ == (mqd_t) -1)
+	{
+		Log_Msg(BB_Logger, "CRITICAL", "mq_open()", errno, LOCAL_ONLY);
+	}
+
+	
+	LogMsg_Struct MsgRecv;                              //Temp variable used to store received messages
+
+	/* Loop forever waiting for Msgs from other pThreads */
+	while(1)
+	{
+		/* Block until a msg is received */
+		if( mq_receive(MQ, (char *)&MsgRecv, sizeof(MsgRecv), NULL) == -1 )
+		{
+			Log_Msg(BB_Logger, "ERROR", "mq_receive()", errno, LOCAL_ONLY);
+		}
+		/* If a msg is received, log it */
+		else
+		{
+			LogFile_Log(Arguments->LogFile_Path, &MsgRecv);
+		}
+	}
+
+	if(mq_unlink(LOGGER_POSIX_Q) != 0)
+	{
+		Log_Msg(BB_Logger, "ERROR", "mq_unlink()", errno, LOCAL_ONLY);
+	}
+	else
+	{
+		Log_Msg(BB_Logger, "INFO", "Successfully unlinked Logger queue!", 0, LOCAL_ONLY);
+	}
+	
+	Log_Msg(BB_Logger, "INFO", "Logger Thread has terminated successfully and will now exit", 0, LOCAL_ONLY);
+	return 0;
+}
+
+
+
+void LogFile_Init(char* LogFilePath)
+{
+	/* File pointer */
+	FILE *MyFileP;
+
+	/* Modify the permissions of the file to be write and open the file (anything stored previously will be erased) */
+	MyFileP = fopen(LogFilePath, "a+");
+
+	if(MyFileP == NULL)
+	{
+		char TempMsg[100];
+		snprintf(TempMsg, 100, "Could not open file path %s", LogFilePath);
+		Log_Msg(BB_Logger, "FATAL", TempMsg, errno, LOCAL_ONLY);
+		exit(1);
+	}
+
+
+	/* NOTE:
+	 * Statements are stored in strings because we want to have a debug output functionality.
+	 * So, if we change anything in fprintf() we will also need to go to the printf() and
+	 * change the text there. Using string and storing our text there makes it easier
+	 * as we only need to change the text in one place rather than two. */	 
+	char* Line1 = "> [%s] Log Event(INFO): Logfile successfully created! TID: %ld\n> L->Source: Logger Thread\n\n";
+	
+	char* Line2 = "\n\r> ***************************************************\n\r";
+	char* Line3 = "> *         APES Project 2 (BeagleBone Side):       *\n\r";
+	char* Line4 = "> *               S.E.C.U.R.E.R.O.O.M               *\n\r";
+	char* Line5 = "> * 'S'uper 'E'ncrypted 'C'ourse project which is a *\n\r";
+	char* Line6 = "> * 'U'seful 'R'oom 'E'mbedded 'S'ystem that        *\n\r";
+	char* Line7 = "> * communicates 'R'emotely 'O'ver the air and it's *\n\r";
+	char* Line8 = "> *              'O'bviously 'M'arvelous            *\n\r";
+	char* Line9 = "> *                                                 *\n\r";
+	char* Line10 = "> *        By: Khalid AlAwadhi | Poorn Mehta        *\n\r";
+	char Line11[60];
+	snprintf(Line11, 60, "> *                                            v%s *\n\r", CURRENT_VER);
+	char* Line12 = "> ***************************************************\n\n\r";
+	
+	/* Temp variable to store current date/time */
+	char CurTime[TIMESTR_SIZE];
+	GetRealTime(CurTime, TIMESTR_SIZE);
+	
+	/* Print to file */
+	fprintf(MyFileP, Line1, CurTime, syscall(SYS_gettid));
+	fprintf(MyFileP, Line2);
+	fprintf(MyFileP, Line3);
+	fprintf(MyFileP, Line4);
+	fprintf(MyFileP, Line5);
+	fprintf(MyFileP, Line6);
+	fprintf(MyFileP, Line7);
+	fprintf(MyFileP, Line8);
+	fprintf(MyFileP, Line9);
+	fprintf(MyFileP, Line10);
+	fprintf(MyFileP, Line11);
+	fprintf(MyFileP, Line12);
+
+	/* Flush file output */
+	fflush(MyFileP);
+
+	/* Close the file */
+	fclose(MyFileP);
+	
+	/* Print to stdout */
+	printf(Line1, CurTime, syscall(SYS_gettid));
+	printf(Line2);
+	printf(Line3);
+	printf(Line4);
+	printf(Line5);
+	printf(Line6);
+	printf(Line7);
+	printf(Line8);
+	printf(Line9);
+	printf(Line10);
+	printf(Line11);
+	printf(Line12);
+}
+
+
+
+void LogFile_Log(char* LogFilePath, LogMsg_Struct* Message)
+{
+	/* File pointer */
+	FILE *MyFileP;
+
+	/* Modify the permissions of the file to append */
+	MyFileP = fopen(LogFilePath, "a");
+	
+	/* Get the source number and turn it into a string.
+	 * This is done for readability in the logging file */
+	char Source_text[SRC_SIZE];
+	EnumtoString(Message->Src, Source_text);
+	
+	if(MyFileP == NULL)
+	{
+		printf("> !! ERROR: Could not open log file: %s\n", LogFilePath);
+		printf("> 	|--> Logging from source '%s' failed\n", Source_text);
+		printf("> 	|--> Destination: Logger Thread\n");
+		printf("> 	|--> Log Level: %s\n", Message->LogLevel);
+		printf("> 	L--> Message: %s\n\n", Message->Msg);
+		return;
+	}
+
+
+	/* This string will store the text to output later on (just a temp variable) */
+	char text[MSGSTR_SIZE];
+	
+	/* Temp variable to store current date/time */
+	char CurTime[TIMESTR_SIZE];
+	GetRealTime(CurTime, TIMESTR_SIZE);
+
+	/* Log the event */
+	strcpy(text, "> [%s] Log Event(%s): %s\n> L->Source: %s\n\n");
+	fprintf(MyFileP, text, CurTime, Message->LogLevel, Message->Msg, Source_text);
+
+	/* Flush file output */
+	fflush(MyFileP);
+
+	/* Close the file */
+	fclose(MyFileP);
+}
+/*
+ * My_UART_BB.h
+ *
+ *  Created on: Apr 20, 2019
+ *      Author: Khalid AlAwadhi
+ ---------------------------------------------------------------------------------------------
+ * # LIBRARY VERSION: v1.0
+ *
+ * # INFO: A UART Driver library for the BeagleBone Green board
+ *
+ * # DEVLEPOMENT: Developed using CodeLite on Debian 8.3
+ *
+ * # LAST UPDATED ON: April 2019 - Used in APES Project 2
+ *
+ * # NOTES:
+ * - The base code of this library was taken from: 
+ *   https://github.com/sijpesteijn/BBCLib
+ * 
+ *  # FUTURE PLANS:
+ *  - NONE
+ ---------------------------------------------------------------------------------------------*/
+ 
+#ifndef MY_UART_BB_H_
+#define MY_UART_BB_H_
+
+#include <stdint.h>
+#include "Global_Defines.h" 
+
+/* Available UARTs on my BeagleBone Enum */
+typedef enum
+{
+	UART0 = 0,
+	UART1 = 1,
+	UART2 = 2,
+	UART3 = 3
+} UART_Num;
+
+
+/* Structure to hold porpoerties of each open UART */
+typedef struct
+{
+	int fd;
+	UART_Num UART_ID;			//Valid parameters are in the UART_Num enum
+	uint32_t BaudRate;
+} UART_Struct;
+ 
+ 
+ 
+ 
+ /**************************************************************************************************************
+ * USAGE: Signal handler for UART1.
+ *
+ * PARAMETERS:
+ * 			  - int Status =>
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void UART1_RX_Signal_Handler(int Status);
+
+ 
+ 
+/**************************************************************************************************************
+ * USAGE: This function inits and opens a chosen UART port on the BeagleBone Green board. If UART1 is chosen,
+ *        it will also enable RX signal interruppts. 
+ *
+ *        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ *        !! Note: You MUST make sure you initialized the desired UARTs in the system itself! !!
+ *        !!	   Run ls /dev/ttyO* and you should see an output like this:				  !!
+ * 	      !!	   # /dev/ttyO0  /dev/ttyO1	/dev/ttyO2  /dev/ttyO3							  !!
+ *        !!	   Each of these map to an enabled UART on the BeagleBone system, O0 is UART0,!!
+ *		  !!	   O1 is UART1, O2 is UART2 and O3 is UART3. Your system might have more or   !!
+ *        !!	   less so double check before calling this function.						  !!
+ *        !!	   Do not use UART0 as that is used by the BeagleBone itself (did not test)	  !!
+ *        !!       To enable PINs try for example: $config-pin P9.21 uart                     !!
+ * 	      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ *
+ * PARAMETERS:
+ * 			  - UART_Struct *UART => The UART structure to open
+ *                                   (Make sure you malloc it! Example:
+ *                                    > UART_Struct *BB_UART1 = malloc(sizeof(UART_Struct));
+ *                                    > BB_UART1->UART_ID = UART1;
+ *                                    > BB_UART1->BaudRate = B9600;)
+ *
+ * RETURNS: Success => 0
+ *          Failure => -1
+ **************************************************************************************************************/
+int8_t Init_UARTx(UART_Struct *UART);
+
+
+
+/**************************************************************************************************************
+ * USAGE: This function closes an open UART port on the BeagleBone Green board.
+ *
+ * PARAMETERS:
+ * 			  - UART_Struct *UART => The UART structure to close
+ *
+ * RETURNS: Success => 0
+ * 			Failure	=> -1
+ **************************************************************************************************************/
+int8_t Close_UARTx(UART_Struct *UART);
+
+
+
+/**************************************************************************************************************
+ * USAGE: This function send a string to the wanted UART port.
+ * 
+ * PARAMETERS:
+ * 			  - UART_Struct *UART => The UART structure to close
+ * 			  - char *TX_String => String to transmit 
+ *
+ * RETURNS: Success => 0
+ * 			Failure	=> -1
+ **************************************************************************************************************/
+int8_t Send_String_UARTx(UART_Struct *UART, char *TX_String);
+
+
+
+/**************************************************************************************************************
+ * USAGE: This function sends a uint8_t array (buffer) that contains all the data for a struct to the
+ *        Tiva.
+ *
+ * PARAMETERS:
+ *            - UART_Struct *UART => The UART port to send the struct to
+ *            - uint8_t* StructToSend => Buffer structure to send
+ *
+ * RETURNS: Success => true
+ *          Failure => false
+ **************************************************************************************************************/
+bool Send_StructBuffer_UARTx(UART_Struct *UART, uint8_t* StructToSend);
+
+
+/**************************************************************************************************************
+ * USAGE: This function XXX
+ * 
+ * PARAMETERS:
+ * 			  - UART_Struct *UART => The UART structure to close
+ * 			  - char *RX_String => XXX
+ *
+ * RETURNS: Success => int16_t Number_of_bytes_read
+ * 			Failure	=> -1
+ **************************************************************************************************************/
+int16_t Read_UARTx(UART_Struct *UART, char *RX_String);
+
+
+#endif /* MY_UART_BB_H_ *///Standard includes
+#include <stdio.h>
+#include <stdint.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <string.h>
+#include <errno.h>
+#include <sys/signal.h>
+
+//My inludes
+#include "Global_Defines.h"
+#include "Master_Functions.h"
+#include "My_UART_BB.h"
+#include "Logger_Thread.h"
+#include "TivaComm_Thread.h"
+#include "NFC_Thread.h"
+#include "KeypadEpaper_Thread.h"
+#include "LoadCell_Thread.h"
+
+
+/* Global Variables */
+bool BT_LINK_ALIVE = false;								//Flag if BT link is alive 
+pthread_mutex_t LogLock; 								//Used to lock when printing out log msgs
+pthread_mutex_t TXLock; 								//Used to lock when TXing
+pthread_mutex_t RXLock; 								//Used to lock when RXing
+struct sigaction UART1_RX_SignalAction;                 //Used in the Init_UART for UART1
+char Start_RX[1] = "0";                                 //Will store the start CMD coming in from Tiva
+UART_Struct *BB_UART1;                                  //Global struct of UART1 as it is used in two files (TivaComm and My_UART)
+volatile bool POLL_RX = false;                          //Flag used to know if we are currently RXing from Tiva or not 
+
+//Poorn
+// Global Variables that are shared between threads
+char Check_Code[6];
+bool Person_ID; //0: Poorn, 1: Khalid
+
+
+/* LAST WORKING ON:
+ * 
+ */
+ 
+/*
+ * ++++++++++ TO-DO: ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ * 1- [COMPLETED] ADD UART INIT FUNCTION AND CODE
+ * 				L-> CREATED TivaComm_Thread.h/.c AND My_UART_BB.h/.c
+ * 
+ * 2- [COMPLETED] TEST UART TX
+ * 
+ * 3- [COMPLETED] TEST UART RX
+ * 				L-> NEED TO TEST PROPER WAY TO SYNC READS
+ * 
+ * 4- [COMPLETED] UPDATE Log_error() FUNCTION
+ * 				L-> REVAMPED ENTIRE FUNCTION, NOW CALLED Log_Msg() AND USED FOR EVERYHTING (NOT JUST ERRORS) 
+ * 
+ * 5- [COMPLETED] CHANGE TIME OUTPUT TO REALTIME (BETTER FORMATTING)
+ * 				L-> CREATED A THREAD-SAFE FUNCTION GetRealTime() FOUND IN Master_Functions.h/.c WITH IMPORTANT NOTES
+ * 
+ * 6- [COMPLETED] CREATE LOGGER THREAD
+ * 				L-> CREATED Logger_Thread.h/.c WHICH IS BASED ON PRJ1 LOGGER THREAD CODE BUT COMPLETLY REVAMPED
+ *                  ALSO, FORMAT OF LOGGING HAS NOW CHANGED. ANYTHING SENT TO THE LOGGER THREAD WILL NOW JUST BE A LOG
+ *                  EVENT AS OPPOSED TO A MESSAGE WITH A SOURCE AND DESTINATION WHICH DID NOT MAKE MUCH SENSE WHEN
+ *                  LOOKING AT THE LOG FILE WHICH IS ONLY SUPPOSED TO BE ABOUT DELIBIRATE LOGS TO IT. 
+ * 
+ * 7- [COMPLETED] CONNECT THE BBoneBLE MODULE
+ * 				L-> BBoneBLE MAC ADDRESS: 9C1D_589C_29AB
+ * 
+ * 8- [COMPLETED] FIX UART READING METHOD (MAYBE INTERUPPTS???)
+ *              L-> ADDED INTERRUPTS (SIGNAL HANDLER) FOR UART1!
+ * 
+ * 9- [COMPLETED] UPDATE SendToThreadQ()
+ * 				L-> UPDATED TO SUPPORT NEW Log_Msg() AND NAME CHANGES IN THIS PROJECT
+ * 
+ * 10- [COMPLETED] ADD NEW TEST STRUCT
+ *              L-> CREATED TivaBB_MsgStruct, FOUND IN Global_Defines.h
+ * 
+ * 11- [COMPLETED] TEST STRUCT SIZE? 
+ * 				L-> STRUCT SIZE IS 86 BYTES. NOT AS BAD AS I EXPECTED
+ * 
+ * 12- [] ATTEMPT TX OF STRUCT TO TIVA WITH PROPER CMDS USED
+ *              L-> CREATED Send_Struct_UARTx() 
+ * 
+ * 13- [COMPLETED] ADD CURRENT VERSION DEFINE
+ * 				L-> FOUND IN Global_Defines.h. JUST CHANGE THE VERSION NO. THERE AND IT WILL UPDATE WHERE NEEDED
+ * 
+ * 14- [COMPLETED] CREATE A PROPER TX FUNCTION FOR THE STRUCTURE
+ * 				L-> CREATED 
+ * 
+ * 15- [COMPLETED!!!!] RX A STRUCT FROM TIVA IN A COMPLETE WAY WITH START, CONFIRM AND END CMDS
+ * 
+ * 16- [UNABLE TO DO] PROBABLY NEED TO HAVE FUNCITON HANDLE TX DIFFERENT STRUCT TYPES
+ *              L-> IN C YOU CANNOT PASS DIFFFERENT STURCTS IN ONE FUNCITON, HAVE TO HAVE SEPEARATE FUNCTIONS. 
+ *                  LOOK AT #19
+ * 
+ * 17- [COMPLETED] UPDATE FUCNTIONS WITH NEW DEFINE SOURCES
+ * 				L-> A LOT OF CHANGES EVERYWHERE
+ * 
+ * 18- [UPDATE - COMPLETED] UPDATE SendToThreadQ() TO WORK WITH NEW PTHREADS
+ *              L-> FUNCTION IS NOW SendToLoggerQ(), EACH THREAD THAT EXPECTS ITS OWN STRUCT NEEDS IT OWN 
+ *                  SendToXXXQ() 
+ * 
+ * 19- [COMPLETED] CREATE A NEW FUNCTION THAT UPDATED GIVEN STRING BASED ON ENUM SOURCE NUMBER
+ * 				L-> CREATED EnumtoString() FOUND IN Global_Defines.h/.c
+ * 
+ * 20- [COMPLETED] NEED TO ADD THE NEW LOGGER STURCT 
+ * 
+ * 21- [COMPLETED!!!!!] TEST RXING A LOG EVENT FROM TIVA
+ * 
+ * 22- [] NEED TO CREATE PROPER POSIX Q FOR TIVACOMM THAT STORES BYTE ARRAYS
+ * 
+ * 23- [] 
+ * 
+ *
+ * +++++++++++++++++++++ CHANGES/INFO: +++++++++++++++++++++
+ * - Should have started this eariler with so many changes happening eveywhere...
+ * 
+ * - Added new Log_Msg struct in Gloobal_Defines.h
+ * 
+ * - Found out that BB can handle fast UART data coming in from Tiva, meaning no need for confirmation
+ *   (#) when RXing here on BB side
+ * 
+ * - 
+ *
+ */
+ 
+ 
+int main(int argc, char **argv)
+{
+	struct Pthread_ArgsStruct args;						//Create the pthread args structure
+
+	char User_LogFilePath[100];							//This will store the log file path location to pass to the Logging pthread
+
+	/* Check if the user entered a logfile path */
+	if(argc > 1)
+	{
+		sprintf(User_LogFilePath, "%s", argv[1]);
+		char TempTxt[100];
+		snprintf(TempTxt, 100, "Chosen log file path: %s", User_LogFilePath);
+		Log_Msg(BB_Main, "INFO", TempTxt, 0, LOCAL_ONLY);
+	}
+	/* Else, use default logfile path */
+	else
+	{
+		sprintf(User_LogFilePath, "./LogFile.txt");
+		char TempTxt[100];
+		snprintf(TempTxt, 100, "No logfile path chosen. Using default location './LogFile.txt'");
+		Log_Msg(BB_Main, "INFO", TempTxt, 0, LOCAL_ONLY);
+	}
+
+	/* Store filepath to pass to pThreads */
+	strcpy(args.LogFile_Path, User_LogFilePath);
+	
+	
+	/* Create needed locks */
+	if( pthread_mutex_init(&LogLock, NULL) != 0)
+	{
+		Log_Msg(BB_Main, "ERROR", "Could not init LogLock mutex!", errno, LOCAL_ONLY);
+	}
+	
+	if( pthread_mutex_init(&TXLock, NULL) != 0)
+	{
+		Log_Msg(BB_Main, "ERROR", "Could not init TXLock mutex!", errno, LOCAL_ONLY);
+	}
+	
+	if( pthread_mutex_init(&RXLock, NULL) != 0)
+	{
+		Log_Msg(BB_Main, "ERROR", "Could not init RXLock mutex!", errno, LOCAL_ONLY);
+	}
+
+	
+	/* Create the needed pThreads */
+	pthread_t Logger_pThread, TivaComm_pThread, NFC_pThread, KeypadEpaper_pThread, LoadCell_pThread;
+
+
+	/* Create Logger pThread */
+	if(pthread_create(&Logger_pThread, NULL, &LoggerThread, (void *)&args) != 0)
+	{
+		Log_Msg(BB_Main, "FATAL", "Logger pthread_create()", errno, LOCAL_ONLY);
+	}
+	else
+	{
+		Log_Msg(BB_Main, "INFO", "SUCCESS: Created Logger Thread!", 0, LOCAL_ONLY);
+	}
+	
+	/* Wait a bit to ensure the Logger thread starts up first */
+	sleep(1);
+
+	/* Create TivaComm pThread */
+	if(pthread_create(&TivaComm_pThread, NULL, &TivaCommThread, NULL) != 0)
+	{
+		Log_Msg(BB_Main, "FATAL", "TiveComm pthread_create()", errno, LOGGER_AND_LOCAL);
+	}
+	else
+	{
+		Log_Msg(BB_Main, "INFO", "SUCCESS: Created TivaComm Thread!", 0, LOGGER_AND_LOCAL);
+	}
+	
+	/* Wait a bit to ensure the TivaComm thread starts up second */
+	sleep(1);
+	
+	/* Create NFC pThread */
+	if(pthread_create(&NFC_pThread, NULL, &NFCThread, NULL) != 0)
+	{
+		Log_Msg(BB_Main, "FATAL", "NFC pthread_create()", errno, LOGGER_AND_LOCAL);
+	}
+	else
+	{
+		Log_Msg(BB_Main, "INFO", "SUCCESS: Created NFC Thread!", 0, LOGGER_AND_LOCAL);
+	}
+	
+	/* Create KeypadEpaper pThread */
+	if(pthread_create(&KeypadEpaper_pThread, NULL, &KeypadEpaperThread, NULL) != 0)
+	{
+		Log_Msg(BB_Main, "FATAL", "KeypadEpaper pthread_create()", errno, LOGGER_AND_LOCAL);
+	}
+	else
+	{
+		Log_Msg(BB_Main, "INFO", "SUCCESS: Created KeypadEpaper Thread!", 0, LOGGER_AND_LOCAL);
+	}
+	
+	/* Create LoadCell pThread */
+	if(pthread_create(&LoadCell_pThread, NULL, &LoadCellThread, NULL) != 0)
+	{
+		Log_Msg(BB_Main, "FATAL", "LoadCell pthread_create()", errno, LOGGER_AND_LOCAL);
+	}
+	else
+	{
+		Log_Msg(BB_Main, "INFO", "SUCCESS: Created LoadCell Thread!", 0, LOGGER_AND_LOCAL);
+	}
+	
+	
+//	while(1)
+//	{
+//		sleep(10);
+//		
+//		if(BT_LINK_ALIVE == true)
+//		{
+//			Log_Msg(BB_Main, "INFO", "Bluetooth link is alive!", 0, LOGGER_AND_LOCAL);
+//			BT_LINK_ALIVE = false;
+//			Send_String_UARTx(BB_UART1, "?#!");
+//		}
+//		else
+//		{
+//			Log_Msg(BB_Main, "INFO", "Bluetooth link is dead x_x!", 0, LOGGER_AND_LOCAL);
+//		}
+//	}
+
+
+	/* Wait for pThreads to finish */
+	pthread_join(Logger_pThread, NULL);
+	pthread_join(TivaComm_pThread, NULL);
+	pthread_join(NFC_pThread, NULL);
+	pthread_join(KeypadEpaper_pThread, NULL);
+	pthread_join(LoadCell_pThread, NULL);
+
+	return 0;
+}
+
+/*
+ * TivaComm_Thread.c
+ *
+ *  Created on: Apr 20, 2019
+ *      Author: Khalid AlAwadhi
+ */
+
+#include "TivaComm_Thread.h"
+
+//Standard includes
+#include <stdio.h>
+#include <stdlib.h>
+#include <termios.h>
+#include <string.h>
+#include <mqueue.h>
+#include <unistd.h>
+#include <errno.h>
+#include <pthread.h>
+
+//My includes
+#include "Global_Defines.h"
+#include "Master_Functions.h"
+#include "My_UART_BB.h"
+
+
+/* Global Variables */
+extern UART_Struct *BB_UART1;
+extern bool POLL_RX;
+extern pthread_mutex_t TXLock; 
+extern pthread_mutex_t RXLock; 
+extern bool BT_LINK_ALIVE;
+
+
+void * TivaCommThread(void * args)
+{
+	/* Create the TivaComm Thread POSIX queue */
+	mqd_t MQ;											//Message queue descriptor
+
+	/* Delete any previous TivaComm POSIX Qs */
+	if(mq_unlink(TIVACOMM_POSIX_Q) != 0)
+	{
+		Log_Msg(BB_TivaComm, "ERROR", "mq_unlink()", errno, LOCAL_ONLY);
+	}
+	else
+	{
+		Log_Msg(BB_TivaComm, "INFO", "Previous TivaComm queue was found and successfully unlinked!", 0, LOCAL_ONLY);
+	}
+	
+	
+	/* Initialize the queue attributes */
+	struct mq_attr attr;
+	attr.mq_flags = O_NONBLOCK;                         /* Flags: 0 or O_NONBLOCK */
+	attr.mq_maxmsg = 10;                                /* Max. # of messages on queue */
+	attr.mq_msgsize = MAX_STRUCT_SIZE;                  /* Max. message size (bytes) */
+	attr.mq_curmsgs = 0;                                /* # of messages currently in queue */
+
+
+	/* Create the TivaComm Thread queue to get byte structs from other pThreads
+	 * and TX them to Tiva via UART (Bluetooth) */
+	MQ = mq_open(TIVACOMM_POSIX_Q, O_CREAT | O_RDONLY | O_NONBLOCK | O_CLOEXEC, 0666, &attr);
+	if(MQ == (mqd_t) -1)
+	{
+		Log_Msg(BB_TivaComm, "FATAL", "mq_open()", errno, LOGGER_AND_LOCAL);
+	}
+	
+	/* Init UART1 */
+	BB_UART1 = malloc(sizeof(UART_Struct));
+	BB_UART1->UART_ID = UART1;
+	BB_UART1->BaudRate = B9600;
+	
+	/* Open the UART port */
+	if( !Init_UARTx(BB_UART1) )
+	{
+		Log_Msg(BB_TivaComm, "INFO", "UART1 port initialized successfully", 0, LOGGER_AND_LOCAL);
+	}
+	else
+	{
+		Log_Msg(BB_TivaComm, "FATAL", "UART1 port could not be initialized!", 0, LOGGER_AND_LOCAL);
+	}
+	
+	
+	/* Create an array of bytes to fit any given struct */
+	uint8_t TX_Struct_Buffer[MAX_STRUCT_SIZE];
+	
+	/* Used to keep track of the RX array */
+	int16_t RX_Index = -1;
+			
+	/* Create a pointer that will iterate through the array and RX from Tiva side */
+	uint8_t* ptr = NULL;
+
+	
+	while(1)
+	{
+		/* If we need to RX something: */
+		if(POLL_RX)
+		{
+	//		Log_Msg(BB_TivaComm, "DEBUG", "STARTING RX POLL", 0, LOCAL_ONLY);
+			
+			/* LOCK */
+			pthread_mutex_lock(&RXLock);
+			
+			BT_LINK_ALIVE = true;
+			
+			/* Create an array of bytes to fit the given struct */
+			uint8_t RX_Struct_Buffer[MAX_STRUCT_SIZE];
+			
+			/* Reset */
+			RX_Index = -1;
+			ptr = &RX_Struct_Buffer;
+			
+			/* Keep adding to the buffer until we get a "!" */
+			do
+			{				
+				/* Block and get byte */
+				if(read(BB_UART1->fd, ptr, 1) == -1)
+				{
+					printf("> Error: Could not read byte from UART1\n");
+				}
+				else
+				{
+					/* RX was successful, increment pointer */
+					ptr++;
+					RX_Index++;
+				}
+			} while ( RX_Struct_Buffer[RX_Index] != END_CMD_CHAR );
+			
+
+//			for(uint8_t i = 0; i < RX_Index; i++)
+//			{
+//				printf("DEBUG: RX_Struct_Buffer[%u]: %u | %c\n", i, RX_Struct_Buffer[i], RX_Struct_Buffer[i]);
+//			}
+
+
+			/* UNLOCK */
+			pthread_mutex_unlock(&RXLock);
+				
+			
+			RX_Struct_Buffer[RX_Index] = '\x00';
+			
+	//		Log_Msg(BB_TivaComm, "DEBUG", "GOT STRUCT", 0, LOCAL_ONLY);
+			
+			Decode_StructBuffer(RX_Struct_Buffer);
+			
+			POLL_RX = false;
+		}
+		
+		/* Else, check if we need to TX something */
+		else
+		{
+			if ( (mq_receive(MQ, TX_Struct_Buffer, MAX_STRUCT_SIZE, NULL) ) != -1 )
+			{
+			//	Log_Msg(BB_TivaComm, "DEBUG", "SENDING STRUCT TO TIVA", 0, LOCAL_ONLY);
+				
+				/* LOCK */
+				pthread_mutex_lock(&TXLock);
+	
+				Send_String_UARTx(BB_UART1, START_CMD);                       //Send Start CMD to Tiva
+				
+				Send_String_UARTx(BB_UART1, (char *)TX_Struct_Buffer);        //Sending struct buffer 
+				
+				Send_String_UARTx(BB_UART1, END_CMD);                         //Send END CMD to Tiva
+				Send_String_UARTx(BB_UART1, END_CMD);                         //Send END CMD to Tiva
+				Send_String_UARTx(BB_UART1, END_CMD);                         //Send END CMD to Tiva
+				Send_String_UARTx(BB_UART1, END_CMD);                         //Send END CMD to Tiva
+				
+				/* UNLOCK */
+				pthread_mutex_unlock(&TXLock);
+			}
+		}
+
+	}
+	
+	
+	if( !Close_UARTx(BB_UART1) )
+	{
+		Log_Msg(BB_TivaComm, "INFO", "UART1 port closed successfully", 0, LOGGER_AND_LOCAL);
+		
+		/* Remember to free the malloced memory */
+		free(BB_UART1);
+		BB_UART1 = NULL;
+	}
+	else
+	{
+		Log_Msg(BB_TivaComm, "ERROR", "UART1 port could not be closed!", 0, LOGGER_AND_LOCAL);
+	}
+	
+	Log_Msg(BB_TivaComm, "INFO", "TivaComm Thread has terminated successfully and will now exit", 0, LOGGER_AND_LOCAL);
+	
+	return 0;
+}
+
+
+void Decode_StructBuffer(uint8_t* StructToDecode)
+{
+	char TmpTxt[100];
+	
+	/* Create the needed structs that will store buffer contents */
+	LogMsg_Struct LogMsgToSend;
+	NFC_T2B_Struct NFC_T2BToSend;
+	KE_T2B_Struct KE_T2BToSend;
+	LC_T2B_Struct LC_T2BToSend;
+			
+			
+	/* Get what structure it is, based on the first byte */
+	switch( StructToDecode[0] )
+	{
+		case LogMsg_Struct_ID:
+			//Log_Msg(BB_TivaComm, "DEBUG", "STRUCTURE TO DECODE IS LOGMSG", 0, LOCAL_ONLY);
+			
+			/* Copy the contents of the buffer to the struct */
+			memcpy(&LogMsgToSend , StructToDecode, sizeof(LogMsg_Struct));
+			
+			/* Send to Logger POSIX Q */
+			Log_Msg(LogMsgToSend.Src, LogMsgToSend.LogLevel, LogMsgToSend.Msg, 0, LOGGER_AND_LOCAL);
+			break;
+			
+
+		case NFC_T2B_Struct_ID:
+		//	Log_Msg(BB_TivaComm, "DEBUG", "STRUCTURE TO DECODE IS NFC_T2B", 0, LOCAL_ONLY);
+			
+			/* Copy the contents of the buffer to the struct */
+			memcpy(&NFC_T2BToSend , StructToDecode, sizeof(NFC_T2B_Struct));
+			
+			/* Send to NFC POSIX Q */
+			SendToNFCThreadQ(NFC_T2BToSend);
+			break;
+			
+			
+		case KE_T2B_Struct_ID:
+		//	Log_Msg(BB_TivaComm, "DEBUG", "STRUCTURE TO DECODE IS KE_T2B_Struct", 0, LOCAL_ONLY);
+			
+			/* Copy the contents of the buffer to the struct */
+			memcpy(&KE_T2BToSend , StructToDecode, sizeof(KE_T2B_Struct));
+	
+			/* Send to KeypadEpaper POSIX Q */
+			SendToKEThreadQ(KE_T2BToSend);
+			break;
+			
+			
+		case LC_T2B_Struct_ID:
+//			Log_Msg(BB_TivaComm, "DEBUG", "STRUCTURE TO DECODE IS LC_T2B_Struct", 0, LOCAL_ONLY);
+			
+			/* Copy the contents of the buffer to the struct */
+			memcpy(&LC_T2BToSend , StructToDecode, sizeof(LC_T2B_Struct));
+	
+			/* Send to LoadCell POSIX Q */
+			SendToLCThreadQ(LC_T2BToSend);
+			break;
+
+
+
+		default:
+			snprintf(TmpTxt, 100, "Decode_StructBuffer() aborted - unknown structure! ID: %u | Src: %u", StructToDecode[0], StructToDecode[1]);
+			Log_Msg(BB_TivaComm, "ERROR", TmpTxt, 0, LOCAL_ONLY);
+			return;
+	}
+}
+
+/*
+ * Master_Functions.h
+ *
+ *  Created on: Apr 20, 2019
+ *      Author: Khalid AlAwadhi
+ */
+
+#ifndef MY_INCLUDES_MASTER_FUNCTIONS_H_
+#define MY_INCLUDES_MASTER_FUNCTIONS_H_
+
+#include <stdint.h>
+#include "Global_Defines.h"
+
+
+/**************************************************************************************************************
+ * USAGE: This function will simply get the current time in seconds with milisecond resolution and return its 
+ *        double value. It was created to simplify our code since we need to get the current time many times 
+ *        and having it in this format helps keeps things organized.
+ *
+ * PARAMETERS:
+ *            - NONE
+ *
+ * RETURNS: double CurrentTime
+ **************************************************************************************************************/
+double GetCurrentTime();
+
+
+
+/**************************************************************************************************************
+ * USAGE: This function stores the current system date/time in a given string using a thread-safe method.
+ * 		  
+ *        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ *        !! NOTE: The given string size MUST be at least 26. Check the implementation for the reason.!! 
+ *        !!       In addition, you may need to add -D_GNU_SOURCE to compiler options or this function!! 
+ *        !!       might not work.                                                                    !!
+ *        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ *
+ * PARAMETERS:
+ *            - char* TimeStr => The string to store the date/time info to
+ * 			  - uint8_t StrLen => Size of the given empty string
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void GetRealTime(char* TimeStr, uint8_t StrLen);
+
+
+
+/**************************************************************************************************************
+ * USAGE: This function takes in a number and updates a given string with the name linked to the enum
+ *        (enums found in Global_Defines.h). Tasks are on Tiva while Threads are on BeagleBone. 
+ * 
+ * PARAMETERS:
+ *            - uint8_t EnumNum => The enum you want to get the name of
+ * 			  - char* Str => String to store the name into (Make sure it at least a size of 20 to work for all
+ *                                                          cases!)
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void EnumtoString(uint8_t EnumNum, char* Str);
+
+
+
+/**************************************************************************************************************
+ * USAGE: This function will send a message to the Logger pThread based on the parameters. In addition, it has
+ *        error handling.
+ *
+ * PARAMETERS:
+ *            - uint8_t Src => Source of the message (Look at Global_Defines.h Source Enums)
+ *            - char* Log => The log level message
+ *            - char* Message => mesaage to send
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void SendToLoggerThreadQ(uint8_t Src, char* Log, char* Message);
+
+
+/**************************************************************************************************************
+ * USAGE: This function will send an NFC struct to the NFC pThread. In addition, it has
+ *        error handling.
+ *
+ * PARAMETERS:
+ *            - NFC_T2B_Struct StructToSend => Struct to send
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void SendToNFCThreadQ(NFC_T2B_Struct StructToSend);
+
+
+/**************************************************************************************************************
+ * USAGE: This function will send an KE_T2B struct to the KeypadEpaper pThread. In addition, it has error 
+ *        handling.
+ *
+ * PARAMETERS:
+ *            - KE_T2B_Struct StructToSend => Struct to send
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void SendToKEThreadQ(KE_T2B_Struct StructToSend);
+
+
+/**************************************************************************************************************
+ * USAGE: This function will send an LC_T2B struct to the LoadCell pThread. In addition, it has error 
+ *        handling.
+ *
+ * PARAMETERS:
+ *            - LC_T2B_Struct StructToSend => Struct to send
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void SendToLCThreadQ(LC_T2B_Struct StructToSend);
+
+
+///**************************************************************************************************************
+// * SCRAPPED!
+// * 
+// * USAGE: This function will send a buffer containing struct data to the TivaComm pThread to TX to Tiva. In 
+// *        addition, it has error handling.
+// *
+// * PARAMETERS:
+// *            - uint8_t Buffer[] => Buffer data to send
+// *
+// * RETURNS: NONE
+// **************************************************************************************************************/
+//void SendToTivaCommThreadQ(uint8_t Buffer[], uint8_t StructSize);
+
+
+
+/**************************************************************************************************************
+ * USAGE: This function will output a user message or UNIX errors alongside a message to either: send them to 
+ *        the Logger thread, output to stdout, or both. This was created using a thread-safe error retrieval
+ *        function.
+ *
+ * PARAMETERS:
+ *            - uint8_t Src => Source of the message (Look at Global_Defines.h Source Enums)
+ *            - char* LogLvl => The level of the message (INFO | WARNING | ERROR | CRITICAL | FATAL)
+ *            - char* OutMsg => The message to display (will be dipalyed before the UNIX errorif applicable)
+ *            - int errnum => must be the 'errno' varible (need to include #include <errno.h>) or just 0 for
+ *                            no error
+ *            - uint8_t Mode => The below modes are already defined in Global_Defines.h
+ *                              0x01 = LOGGER_AND_LOCAL:    In this mode, the message will be displayed to 
+ *                                                          the user in addition to sending the message to the
+ *                                                          Logger pThread.
+ * 
+ *                              0x02 = LOGGER_ONLY:         In this mode, the message will only be sent to the
+ *                                                          Logger pThread.
+ * 
+ *                              0x03 = LOCAL_ONLY(Default): In this mode, the message will only be displayed 
+ *                                                          to user via stdout(printf).
+ * 
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void Log_Msg(uint8_t Src, char* LogLvl, char* OutMsg, int errnum, uint8_t Mode);
+
+
+
+
+
+
+#endif /* MY_INCLUDES_MASTER_FUNCTIONS_H_ */
+/*
+ * Master_Functions.c
+ *
+ *  Created on: Apr 20, 2019
+ *      Author: Khalid AlAwadhi
+ */
+ #include "Master_Functions.h"
+ 
+//Standard includes
+#include <sys/time.h>
+#include <stdio.h>
+#include <mqueue.h>
+#include <string.h>
+#include <errno.h>
+#include <time.h>
+#include <fcntl.h>
+#include <locale.h>
+#include <pthread.h>
+
+//My includes
+#include "Global_Defines.h"
+
+
+/* Global variables */
+extern pthread_mutex_t LogLock; 	
+
+
+double GetCurrentTime()
+{
+	/* Declaring structure for time */
+	struct timeval time;
+	
+	/* Get current time and save it */
+	gettimeofday(&time, 0);
+	
+	/* Combine the Secs with uSecs by typecasting
+     * Long Int to Double and return as 1 Double value */
+	return (double)(time.tv_sec)+(((double)(time.tv_usec))/1000000);
+}
+
+
+
+void GetRealTime(char* TimeStr, uint8_t StrLen)
+{
+	/* Error handling: the user must make sure the length of the 
+	 * given string is at least 26 as the function asctime_r()
+	 * below does not care and will overwrite adjacent array locations
+	 * if the size does not fit and might cause bugs.. or worse */
+	if(StrLen < 26)
+	{
+		return;
+	}
+	time_t RawTime;
+	struct tm TimeInfo;
+	
+	/* Get raw time from system */
+	time(&RawTime);
+	
+	/* Convert time_t to tm* */
+	localtime_r(&RawTime, &TimeInfo);
+	
+	/* Store the current system time in the given string */
+	asctime_r(&TimeInfo, TimeStr);
+	
+	/* Format the string by removing the \n and the year */
+	TimeStr[25] = '\x00';
+	TimeStr[24] = '\x00';
+	TimeStr[23] = '\x00';
+	TimeStr[22] = '\x00';
+	TimeStr[21] = '\x00';
+	TimeStr[20] = '\x00';
+	TimeStr[19] = '\x00';
+}
+
+
+
+void EnumtoString(uint8_t EnumNum, char* Str)
+{
+	/* Store name based on enum */
+	switch(EnumNum)
+	{
+		/* Tiva Sources */
+		case T_Main:
+			strcpy(Str, "Main Task");
+			break;
+
+		case T_BBComm:
+			strcpy(Str, "BBComm Task");
+			break;
+			
+		case T_NFC:
+			strcpy(Str, "NFC Task");
+			break;
+			
+		case T_KeypadEpaper:
+			strcpy(Str, "KeypadEpaper Task");
+			break;
+
+		case T_LoadCell:
+			strcpy(Str, "LoadCell Task");
+			break;
+
+		case T_Lux:
+			strcpy(Str, "Lux Task");
+			break;
+			
+		case T_Servo:
+			strcpy(Str, "Servo Task");
+			break;
+			
+		case T_BTLink:
+			strcpy(Str, "BTLink Task");
+			break;
+			
+			case T_Outputs:
+			strcpy(Str, "Outputs Task");
+			break;
+		
+		/* BeagleBone Sources */
+		case BB_Main:
+			strcpy(Str, "Main Thread");
+			break;
+			
+		case BB_Logger:
+			strcpy(Str, "Logger Thread");
+			break;
+			
+		case BB_TivaComm:
+			strcpy(Str, "TivaComm Thread");
+			break;
+			
+		case BB_NFC:
+			strcpy(Str, "NFC Thread");
+			break;
+			
+		case BB_KeypadEpaper:
+			strcpy(Str, "KeypadEpaper Thread");
+			break;
+
+		case BB_LoadCell:
+			strcpy(Str, "LoadCell Thread");
+			break;
+
+		default:
+			strcpy(Str, "Unknown Thread/Task");
+			break;
+	}
+}
+
+
+
+void SendToLoggerThreadQ(uint8_t Src, char* Log, char* Message)
+{
+	LogMsg_Struct Msg2Send =
+	{
+		.ID = LogMsg_Struct_ID,
+		.Src = Src
+	};
+	strcpy(Msg2Send.LogLevel, Log);
+	strcpy(Msg2Send.Msg, Message);
+	
+	mqd_t MQ;						//Message queue descriptor
+		
+	/* Open the Logger Thread POSIX queue - write only */
+	MQ = mq_open(LOGGER_POSIX_Q, O_WRONLY | O_CLOEXEC);		//NOTE: IF YOU GET AN 'O_CLOEXEC' UNDEFINED ERROR ADD -D_GNU_SOURCE TO COMPILER OPTIONS
+	
+	
+	char ErrMsg[MSGSTR_SIZE];								//Temp variable
+	
+	
+	/* Error check */
+	if(MQ == (mqd_t) -1)
+	{
+		snprintf(ErrMsg, MSGSTR_SIZE, "SendToLoggerThreadQ() => mq_open(), attempted to open Logger queue");
+		Log_Msg(Msg2Send.Src, "ERROR", ErrMsg, errno, LOCAL_ONLY);
+		return;
+	}
+	
+	/* Send Msg to POSIX queue */
+	if(mq_send(MQ, &Msg2Send, sizeof(LogMsg_Struct), 0) != 0)
+	{
+		snprintf(ErrMsg, MSGSTR_SIZE, "SendToLoggerThreadQ() => mq_send(), attempted to send message '%s' to Logger queue", Msg2Send.Msg);
+		Log_Msg(Msg2Send.Src, "ERROR", ErrMsg, errno, LOCAL_ONLY);
+		return;
+	}
+	
+	if(mq_close(MQ) != 0)
+	{
+		Log_Msg(Msg2Send.Src, "ERROR", "SendToLoggerThreadQ() => mq_close(), attempted to close Logger queue", errno, LOCAL_ONLY);
+	}
+}
+
+
+
+void SendToNFCThreadQ(NFC_T2B_Struct StructToSend)
+{
+//	printf("SendToNFCThreadQ DEBUG ID: %c | %u\n", StructToSend.ID, StructToSend.ID);
+//	printf("SendToNFCThreadQ DEBUG SRC: %c | %u\n", StructToSend.Src, StructToSend.Src);
+	
+	mqd_t MQ;						//Message queue descriptor
+		
+	/* Open the NFC Thread POSIX queue - write only */
+	MQ = mq_open(NFC_POSIX_Q, O_WRONLY | O_CLOEXEC);		//NOTE: IF YOU GET AN 'O_CLOEXEC' UNDEFINED ERROR ADD -D_GNU_SOURCE TO COMPILER OPTIONS
+	
+	
+	char ErrMsg[MSGSTR_SIZE];								//Temp variable
+	
+	
+	/* Error check */
+	if(MQ == (mqd_t) -1)
+	{
+		snprintf(ErrMsg, MSGSTR_SIZE, "SendToNFCThreadQ() => mq_open(), attempted to open NFC queue");
+		Log_Msg(BB_TivaComm, "ERROR", ErrMsg, errno, LOGGER_AND_LOCAL);
+		return;
+	}
+	
+	/* Send Struct to POSIX queue */
+	if(mq_send(MQ, &StructToSend, sizeof(NFC_T2B_Struct), 0) != 0)
+	{
+		snprintf(ErrMsg, MSGSTR_SIZE, "SendToNFCThreadQ() => mq_send(), attempted to send struct to NFC queue");
+		Log_Msg(BB_TivaComm, "ERROR", ErrMsg, errno, LOGGER_AND_LOCAL);
+		return;
+	}
+	
+	if(mq_close(MQ) != 0)
+	{
+		Log_Msg(BB_TivaComm, "ERROR", "SendToNFCThreadQ() => mq_close(), attempted to close NFC queue", errno, LOGGER_AND_LOCAL);
+	}
+}
+
+
+
+void SendToKEThreadQ(KE_T2B_Struct StructToSend)
+{
+//	printf("SendToKEThreadQ DEBUG ID: %c | %u\n", StructToSend.ID, StructToSend.ID);
+//	printf("SendToKEThreadQ DEBUG SRC: %c | %u\n", StructToSend.Src, StructToSend.Src);
+//	for(uint8_t i = 0; i < 6; i ++)
+//	{
+//		printf("SENDQ DEBUG: %c | %u\n", StructToSend.KeyPad_Code[i], StructToSend.KeyPad_Code[i]);
+//	}
+	
+	mqd_t MQ;						//Message queue descriptor
+		
+	/* Open the KeypadEpaper Thread POSIX queue - write only */
+	MQ = mq_open(KEYPADEPAPER_POSIX_Q, O_WRONLY | O_CLOEXEC);		//NOTE: IF YOU GET AN 'O_CLOEXEC' UNDEFINED ERROR ADD -D_GNU_SOURCE TO COMPILER OPTIONS
+	
+	
+	char ErrMsg[MSGSTR_SIZE];								//Temp variable
+	
+	
+	/* Error check */
+	if(MQ == (mqd_t) -1)
+	{
+		snprintf(ErrMsg, MSGSTR_SIZE, "SendToKEThreadQ() => mq_open(), attempted to open KE queue");
+		Log_Msg(BB_TivaComm, "ERROR", ErrMsg, errno, LOGGER_AND_LOCAL);
+		return;
+	}
+	
+	/* Send Struct to POSIX queue */
+	if(mq_send(MQ, &StructToSend, sizeof(KE_T2B_Struct), 0) != 0)
+	{
+		snprintf(ErrMsg, MSGSTR_SIZE, "SendToKEThreadQ() => mq_send(), attempted to send struct to KE queue");
+		Log_Msg(BB_TivaComm, "ERROR", ErrMsg, errno, LOGGER_AND_LOCAL);
+		return;
+	}
+	
+	if(mq_close(MQ) != 0)
+	{
+		Log_Msg(BB_TivaComm, "ERROR", "SendToKEThreadQ() => mq_close(), attempted to close KE queue", errno, LOGGER_AND_LOCAL);
+	}
+}
+
+
+void SendToLCThreadQ(LC_T2B_Struct StructToSend)
+{
+	mqd_t MQ;						//Message queue descriptor
+		
+	/* Open the LoadCell Thread POSIX queue - write only */
+	MQ = mq_open(LOADCELL_POSIX_Q, O_WRONLY | O_CLOEXEC);		//NOTE: IF YOU GET AN 'O_CLOEXEC' UNDEFINED ERROR ADD -D_GNU_SOURCE TO COMPILER OPTIONS
+	
+	
+	char ErrMsg[MSGSTR_SIZE];								//Temp variable
+	
+	
+	/* Error check */
+	if(MQ == (mqd_t) -1)
+	{
+		snprintf(ErrMsg, MSGSTR_SIZE, "SendToLCThreadQ() => mq_open(), attempted to open LC queue");
+		Log_Msg(BB_TivaComm, "ERROR", ErrMsg, errno, LOGGER_AND_LOCAL);
+		return;
+	}
+	
+	/* Send Struct to POSIX queue */
+	if(mq_send(MQ, &StructToSend, sizeof(LC_T2B_Struct), 0) != 0)
+	{
+		snprintf(ErrMsg, MSGSTR_SIZE, "SendToLCThreadQ() => mq_send(), attempted to send struct to LC queue");
+		Log_Msg(BB_TivaComm, "ERROR", ErrMsg, errno, LOGGER_AND_LOCAL);
+		return;
+	}
+	
+	if(mq_close(MQ) != 0)
+	{
+		Log_Msg(BB_TivaComm, "ERROR", "SendToLCThreadQ() => mq_close(), attempted to close LC queue", errno, LOGGER_AND_LOCAL);
+	}
+}
+
+//void SendToTivaCommThreadQ(uint8_t Buffer[], uint8_t StructSize)
+//{
+//	
+//	Log_Msg(BB_NFC, "DEBUG", " REACHED SendToTivaCommThreadQ!", 0, LOCAL_ONLY);
+//	
+//	printf("sizeof buffer: %d\n\n", StructSize);
+//	
+//	mqd_t MQ;						//Message queue descriptor
+//		
+//	/* Open the TivaComm Thread POSIX queue - write only */
+//	MQ = mq_open(TIVACOMM_POSIX_Q, O_WRONLY | O_CLOEXEC);		//NOTE: IF YOU GET AN 'O_CLOEXEC' UNDEFINED ERROR ADD -D_GNU_SOURCE TO COMPILER OPTIONS
+//	
+//	
+//	char ErrMsg[MSGSTR_SIZE];								//Temp variable
+//	
+//	
+//	/* Error check */
+//	if(MQ == (mqd_t) -1)
+//	{
+//		snprintf(ErrMsg, MSGSTR_SIZE, "SendToTivaCommThreadQ() => mq_open(), attempted to open TivaComm queue");
+//		Log_Msg(BB_NFC, "ERROR", ErrMsg, errno, LOGGER_AND_LOCAL);
+//		return;
+//	}
+//	
+//	/* Send Struct to POSIX queue */
+//	if(mq_send(MQ, &Buffer, StructSize, 0) != 0)
+//	{
+//		snprintf(ErrMsg, MSGSTR_SIZE, "SendToTivaCommThreadQ() => mq_send(), attempted to send buffer struct to TivaComm queue");
+//		Log_Msg(BB_NFC, "ERROR", ErrMsg, errno, LOGGER_AND_LOCAL);
+//		return;
+//	}
+//	
+//	if(mq_close(MQ) != 0)
+//	{
+//		Log_Msg(BB_NFC, "ERROR", "SendToTivaCommThreadQ() => mq_close(), attempted to close TivaComm queue", errno, LOGGER_AND_LOCAL);
+//	}
+//}
+
+
+
+void Log_Msg(uint8_t Src, char* LogLvl, char* OutMsg, int errnum, uint8_t Mode)
+{
+	/* Get name of source */
+	char Source_text[SRC_SIZE]; 
+	EnumtoString(Src, Source_text);
+	
+	/* This will store the final output message */
+	char Output_Log[MSGSTR_SIZE];
+	
+	/* If the errno is not 0, that means we are logging an error */
+	if(errnum != 0)
+	{
+		/* Get error via a thread-safe function which is strerror_l(). 	
+		 * Create locale */
+		locale_t locale = newlocale(LC_CTYPE_MASK|LC_NUMERIC_MASK|LC_TIME_MASK|
+                                    LC_COLLATE_MASK|LC_MONETARY_MASK|LC_MESSAGES_MASK,
+                                    "",(locale_t)0);
+		
+		/* Combine user message with the strerror */
+		snprintf(Output_Log, MSGSTR_SIZE, "%s: %s", OutMsg, strerror_l(errnum, locale));	
+	}
+	else
+	{
+		/* Just copy the user message */
+		strcpy(Output_Log, OutMsg);
+	}
+	
+	/* Temp variable to store current date/time */
+	char CurTime[TIMESTR_SIZE]; 
+			
+	
+	/* LOCK */
+	pthread_mutex_lock(&LogLock);
+			
+	/* Output message depending on chosen mode */
+	switch(Mode)
+	{
+		case LOGGER_ONLY:
+			SendToLoggerThreadQ(Src, LogLvl, Output_Log);
+			break;
+
+		case LOGGER_AND_LOCAL:
+			GetRealTime(CurTime, TIMESTR_SIZE);
+			printf("> [%s] Log Event(%s): %s\n> L->Source: %s\n\n", CurTime, LogLvl, Output_Log, Source_text);
+			SendToLoggerThreadQ(Src, LogLvl, Output_Log);
+			break;
+			
+		default:
+			GetRealTime(CurTime, TIMESTR_SIZE);
+			printf("> [%s] Log Event(%s): %s\n> L->Source: %s\n\n", CurTime, LogLvl, Output_Log, Source_text);
+			break;
+	}
+	
+	/* UNLOCK */
+	pthread_mutex_unlock(&LogLock);
+}
+
+
+
+
+/*
+ * LoadCell_Thread.h
+ *
+ *  Created on: Apr 28, 2019
+ *      Author: Khalid AlAwadhi
+ */
+
+#ifndef LOADCELL_THREAD_H_
+#define LOADCELL_THREAD_H_
+
+#include <stdint.h>
+#include "Global_Defines.h"
+
+
+#define     LC_VerificationLowmv            200
+#define     LC_VerificationHighmv           300
+#define     LC_ConsecutiveVerificationNeeded      5
+
+#define     SV_Enable_Pos       0
+#define     SV_Enable_Mask      (1 << SV_Enable_Pos)
+
+
+
+/**************************************************************************************************************
+ * USAGE: This function contains all what the LoadCell pThread will do.
+ *
+ * PARAMETERS:
+ *            - NONE
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void * LoadCellThread(void * args);
+
+
+
+/**************************************************************************************************************
+ * USAGE: This function decides what outputs to enable/disable on Tiva side.
+ *
+ * PARAMETERS:
+ *            - LC_T2B_Struct LC_Rx => The struct received
+ *
+ * RETURNS: Success => 0
+ *          Failure => 1
+ **************************************************************************************************************/
+bool LC_Function(LC_T2B_Struct LC_Rx);
+
+
+
+/**************************************************************************************************************
+ * USAGE: This function converts the struct into a byte array and then send it to the TivaComm pThread to TX. 
+ *
+ * PARAMETERS:
+ *            - OI_B2T_Struct StructToSend => The structure to send 
+ * 
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void Send_OIStruct_ToTiva(OI_B2T_Struct StructToSend);
+
+
+#endif /* LOADCELL_THREAD_H_ */
