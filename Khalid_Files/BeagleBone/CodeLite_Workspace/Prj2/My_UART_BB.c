@@ -157,36 +157,80 @@ int8_t Send_String_UARTx(UART_Struct *UART, char *TX_String)
 
 
 
-bool Send_StructBuffer_UARTx(UART_Struct *UART, uint8_t* StructToSend)
-{
-	/* Error handling - Assert the given UART number is valid */
-	ASSERT( UART_Num <= 7 );
+//bool Send_StructBuffer_UARTx(UART_Struct *UART, uint8_t* StructToSend)
+//{
+//	/* Error handling */
+//	if(UART == NULL)
+//	{
+//		printf("> Error: UART structure not initialized\n");
+//		return false;
+//	}
+//	
+//	uint16_t SizeOfStruct;
+//
+//	/* Get what structure it is, based on the first byte */
+//	switch( StructToSend[0] )
+//	{
+//		case KE_B2T_Struct_ID:
+//			Log_Msg(BB_TivaComm, "DEBUG", "STRUCTURE TO SEND IS KE_B2T_Struct", 0, LOCAL_ONLY);
+//			SizeOfStruct = sizeof(KE_B2T_Struct);
+//			break;
+//
+//
+//		default:
+//			Log_Msg(BB_TivaComm, "ERROR", "Send_StructBuffer_UARTx() aborted - unknown structure!", 0, LOCAL_ONLY);
+//			return false;
+//	}
+//
+//	uint16_t i;
+//	int16_t BytesRead;		//Stores bytes read or error
+//	char RX_BYTE[1];		//Stores the RX byte
+//	
+//	
+//	if(write(UART->fd, StructToSend, SizeOfStruct) == -1)
+//	{
+//		printf("> Error: Could not send struct to UART1\n");
+//		return false;
+//	}
+//
+//	
+////	
+////	/* Loop for each element */
+////	for(i = 0; i < SizeOfStruct; i++)
+////	{
+//////		/* Wait for a response => '#' before the next TX - Blocking RX poll */
+//////		BytesRead = read(UART->fd,(void*)RX_BYTE, 1);
+//////		
+//////		/* Error check */
+//////		if(BytesRead == -1)
+//////		{
+//////		//	Log_Msg(BB_TivaComm, "ERROR", "Could not finish sending struct to UART1! Exiting Send_Struct_UARTx()", 0, LOGGER_AND_LOCAL);
+//////			return false;
+//////		}
+//////		else
+//////		{
+//////			printf("> Read '%s' from UART %u\n", RX_BYTE, UART->UART_ID);
+//////		}
+////		
+////		/* TX one byte at a time, check for errors */
+////		if(write(UART->fd, StructToSend, 1) == -1)
+////		{
+////		//	Log_Msg(BB_TivaComm, "ERROR", "Could not finish sending struct to UART1! Exiting Send_Struct_UARTx()", 0, LOGGER_AND_LOCAL);
+////			return false;
+////		}
+////		else
+////		{
+////			/* TX was successful, increment pointer */
+////			StructToSend++;
+////		//	printf("> DEBUG => Sent Byte!\n");
+////		}
+////
+////		
+////	}
+//	
+//	return true;
+//}
 
-	uint16_t SizeOfStruct;
-
-	/* Get what structure it is, based on the first byte */
-	switch( StructToSend[0] )
-	{
-		case LogMsg_Struct_ID:
-			Log_Msg(T_BBComm, "DEBUG", "STRUCTURE TO SEND IS LOGMSG", LOCAL_ONLY);
-			SizeOfStruct = sizeof(LogMsg_Struct);
-			break;
-
-
-
-		default:
-			Log_Msg(T_BBComm, "ERROR", "Send_StructBuffer_UARTx() aborted - unknown structure!", LOCAL_ONLY);
-			return false;
-	}
-
-	uint16_t i;
-	for(i = 0; i < SizeOfStruct; i++)
-	{
-		UART_Putchar(UARTBase[UART_Num], StructToSend[i]);
-	}
-
-	return true;
-}
 //bool Send_Struct_UARTx(UART_Struct *UART, TivaBB_MsgStruct StructToSend)
 //{
 //	/* Error handling */

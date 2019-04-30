@@ -74,6 +74,56 @@ void EnumtoString(uint8_t EnumNum, char* Str);
 void SendToLoggerThreadQ(uint8_t Src, char* Log, char* Message);
 
 
+/**************************************************************************************************************
+ * USAGE: This function will send an NFC struct to the NFC pThread. In addition, it has
+ *        error handling.
+ *
+ * PARAMETERS:
+ *            - NFC_T2B_Struct StructToSend => Struct to send
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void SendToNFCThreadQ(NFC_T2B_Struct StructToSend);
+
+
+/**************************************************************************************************************
+ * USAGE: This function will send an KE_T2B struct to the KeypadEpaper pThread. In addition, it has error 
+ *        handling.
+ *
+ * PARAMETERS:
+ *            - KE_T2B_Struct StructToSend => Struct to send
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void SendToKEThreadQ(KE_T2B_Struct StructToSend);
+
+
+/**************************************************************************************************************
+ * USAGE: This function will send an LC_T2B struct to the LoadCell pThread. In addition, it has error 
+ *        handling.
+ *
+ * PARAMETERS:
+ *            - LC_T2B_Struct StructToSend => Struct to send
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void SendToLCThreadQ(LC_T2B_Struct StructToSend);
+
+
+///**************************************************************************************************************
+// * SCRAPPED!
+// * 
+// * USAGE: This function will send a buffer containing struct data to the TivaComm pThread to TX to Tiva. In 
+// *        addition, it has error handling.
+// *
+// * PARAMETERS:
+// *            - uint8_t Buffer[] => Buffer data to send
+// *
+// * RETURNS: NONE
+// **************************************************************************************************************/
+//void SendToTivaCommThreadQ(uint8_t Buffer[], uint8_t StructSize);
+
+
 
 /**************************************************************************************************************
  * USAGE: This function will output a user message or UNIX errors alongside a message to either: send them to 
@@ -103,15 +153,6 @@ void Log_Msg(uint8_t Src, char* LogLvl, char* OutMsg, int errnum, uint8_t Mode);
 
 
 
-/**************************************************************************************************************
- * USAGE: This function XXX
- *
- * PARAMETERS:
- *            - XXX
- * 
- * RETURNS: NONE
- **************************************************************************************************************/
-void Send_NFCStruct_ToTiva();
 
 
 

@@ -9,7 +9,7 @@
 /***************************************
  *   Current Program Version define    *
  ***************************************/
-#define CURRENT_VER 				"1.5"
+#define CURRENT_VER 				"1.9"
 
 
 /***************************************
@@ -45,6 +45,7 @@ typedef enum
  * or RXing                              *
  *****************************************/
 #define START_CMD                  "?"
+#define START_CMD_CHAR             '?'
 #define CONFIRM_CMD                "#"
 #define END_CMD                    "!"
 #define END_CMD_CHAR               '!'
@@ -73,7 +74,13 @@ typedef enum
  ***************************************/
 typedef enum
 {
-	LogMsg_Struct_ID = 1
+	LogMsg_Struct_ID = 1,
+	NFC_T2B_Struct_ID = 2,
+	KE_B2T_Struct_ID = 3,
+	KE_T2B_Struct_ID = 4,
+	LC_B2T_Struct_ID = 5,
+	LC_T2B_Struct_ID = 6,
+	OI_B2T_Struct_ID = 7
 } Struct_ID;
 
 
@@ -88,14 +95,78 @@ typedef struct
 	char Msg[MSGSTR_SIZE];
 } LogMsg_Struct;
 
+/***************************************
+ *  Struct used by NFC thread/task     *
+ *  (Tiva to BB)                       *
+ ***************************************/
+typedef struct
+{
+    uint8_t ID;
+    uint8_t Src;
+    uint8_t NFC_Tag_ID_Array[4];
+} NFC_T2B_Struct;
 
-//Struct used by NFC thread/task
+
+/***************************************
+ *  Struct used by NFC pThread /       *
+ *  KeypadEpaper task (BB to Tiva)     *
+ ***************************************/
+typedef struct
+{
+    uint8_t ID;
+    uint8_t Src;
+    bool KeyPad_Poll;
+    bool EP_Update;
+    char Image_Name[10];
+} KE_B2T_Struct;
+
+
+/***************************************
+ *  Struct used by KeypadEpaper task / *
+ *  pThread (Tiva to BB)               *
+ ***************************************/
+typedef struct
+{
+    uint8_t ID;
+    uint8_t Src;
+    uint8_t KeyPad_Code[6];
+} KE_T2B_Struct;
+
+
+/***************************************
+ *  Struct used by KeypadEpaper pThread*
+ *   / LoadCell task (BB to Tiva)      *
+ ***************************************/
+typedef struct
+{
+    uint8_t ID;
+    uint8_t Src;
+    bool LC_Poll;
+} LC_B2T_Struct;
+
+/***************************************
+ *  Struct used by LoadCell task/thread*
+ *  (Tiva to BB)                       *
+ ***************************************/
+typedef struct
+{
+    uint8_t ID;
+    uint8_t Src;
+    uint16_t LC_SamplesArraymv[20];
+} LC_T2B_Struct;
+
+
+/***************************************
+ *  Struct sent from LoadCell pThread  *
+ *  to Outputs Task                    *
+ *  (BB to Tiva)                       *
+ ***************************************/
 typedef struct
 {
 	uint8_t ID;
-	uint8_t Src;
-	//ADD STUFF
-} NFC_T2B_Struct;
+    uint8_t Src;
+    uint8_t OI_Data;
+} OI_B2T_Struct;
 
 
 /***************************************
@@ -108,6 +179,8 @@ typedef struct
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 /***************************************
  *      pThread Argument Structure     *
  ***************************************/

@@ -15,13 +15,14 @@
 #include <time.h>
 #include <fcntl.h>
 #include <locale.h>
+#include <pthread.h>
 
 //My includes
 #include "Global_Defines.h"
 
 
 /* Global variables */
-	
+extern pthread_mutex_t LogLock; 	
 
 
 double GetCurrentTime()
@@ -191,6 +192,158 @@ void SendToLoggerThreadQ(uint8_t Src, char* Log, char* Message)
 
 
 
+void SendToNFCThreadQ(NFC_T2B_Struct StructToSend)
+{
+//	printf("SendToNFCThreadQ DEBUG ID: %c | %u\n", StructToSend.ID, StructToSend.ID);
+//	printf("SendToNFCThreadQ DEBUG SRC: %c | %u\n", StructToSend.Src, StructToSend.Src);
+	
+	mqd_t MQ;						//Message queue descriptor
+		
+	/* Open the NFC Thread POSIX queue - write only */
+	MQ = mq_open(NFC_POSIX_Q, O_WRONLY | O_CLOEXEC);		//NOTE: IF YOU GET AN 'O_CLOEXEC' UNDEFINED ERROR ADD -D_GNU_SOURCE TO COMPILER OPTIONS
+	
+	
+	char ErrMsg[MSGSTR_SIZE];								//Temp variable
+	
+	
+	/* Error check */
+	if(MQ == (mqd_t) -1)
+	{
+		snprintf(ErrMsg, MSGSTR_SIZE, "SendToNFCThreadQ() => mq_open(), attempted to open NFC queue");
+		Log_Msg(BB_TivaComm, "ERROR", ErrMsg, errno, LOGGER_AND_LOCAL);
+		return;
+	}
+	
+	/* Send Struct to POSIX queue */
+	if(mq_send(MQ, &StructToSend, sizeof(NFC_T2B_Struct), 0) != 0)
+	{
+		snprintf(ErrMsg, MSGSTR_SIZE, "SendToNFCThreadQ() => mq_send(), attempted to send struct to NFC queue");
+		Log_Msg(BB_TivaComm, "ERROR", ErrMsg, errno, LOGGER_AND_LOCAL);
+		return;
+	}
+	
+	if(mq_close(MQ) != 0)
+	{
+		Log_Msg(BB_TivaComm, "ERROR", "SendToNFCThreadQ() => mq_close(), attempted to close NFC queue", errno, LOGGER_AND_LOCAL);
+	}
+}
+
+
+
+void SendToKEThreadQ(KE_T2B_Struct StructToSend)
+{
+//	printf("SendToKEThreadQ DEBUG ID: %c | %u\n", StructToSend.ID, StructToSend.ID);
+//	printf("SendToKEThreadQ DEBUG SRC: %c | %u\n", StructToSend.Src, StructToSend.Src);
+//	for(uint8_t i = 0; i < 6; i ++)
+//	{
+//		printf("SENDQ DEBUG: %c | %u\n", StructToSend.KeyPad_Code[i], StructToSend.KeyPad_Code[i]);
+//	}
+	
+	mqd_t MQ;						//Message queue descriptor
+		
+	/* Open the KeypadEpaper Thread POSIX queue - write only */
+	MQ = mq_open(KEYPADEPAPER_POSIX_Q, O_WRONLY | O_CLOEXEC);		//NOTE: IF YOU GET AN 'O_CLOEXEC' UNDEFINED ERROR ADD -D_GNU_SOURCE TO COMPILER OPTIONS
+	
+	
+	char ErrMsg[MSGSTR_SIZE];								//Temp variable
+	
+	
+	/* Error check */
+	if(MQ == (mqd_t) -1)
+	{
+		snprintf(ErrMsg, MSGSTR_SIZE, "SendToKEThreadQ() => mq_open(), attempted to open KE queue");
+		Log_Msg(BB_TivaComm, "ERROR", ErrMsg, errno, LOGGER_AND_LOCAL);
+		return;
+	}
+	
+	/* Send Struct to POSIX queue */
+	if(mq_send(MQ, &StructToSend, sizeof(KE_T2B_Struct), 0) != 0)
+	{
+		snprintf(ErrMsg, MSGSTR_SIZE, "SendToKEThreadQ() => mq_send(), attempted to send struct to KE queue");
+		Log_Msg(BB_TivaComm, "ERROR", ErrMsg, errno, LOGGER_AND_LOCAL);
+		return;
+	}
+	
+	if(mq_close(MQ) != 0)
+	{
+		Log_Msg(BB_TivaComm, "ERROR", "SendToKEThreadQ() => mq_close(), attempted to close KE queue", errno, LOGGER_AND_LOCAL);
+	}
+}
+
+
+void SendToLCThreadQ(LC_T2B_Struct StructToSend)
+{
+	mqd_t MQ;						//Message queue descriptor
+		
+	/* Open the LoadCell Thread POSIX queue - write only */
+	MQ = mq_open(LOADCELL_POSIX_Q, O_WRONLY | O_CLOEXEC);		//NOTE: IF YOU GET AN 'O_CLOEXEC' UNDEFINED ERROR ADD -D_GNU_SOURCE TO COMPILER OPTIONS
+	
+	
+	char ErrMsg[MSGSTR_SIZE];								//Temp variable
+	
+	
+	/* Error check */
+	if(MQ == (mqd_t) -1)
+	{
+		snprintf(ErrMsg, MSGSTR_SIZE, "SendToLCThreadQ() => mq_open(), attempted to open LC queue");
+		Log_Msg(BB_TivaComm, "ERROR", ErrMsg, errno, LOGGER_AND_LOCAL);
+		return;
+	}
+	
+	/* Send Struct to POSIX queue */
+	if(mq_send(MQ, &StructToSend, sizeof(LC_T2B_Struct), 0) != 0)
+	{
+		snprintf(ErrMsg, MSGSTR_SIZE, "SendToLCThreadQ() => mq_send(), attempted to send struct to LC queue");
+		Log_Msg(BB_TivaComm, "ERROR", ErrMsg, errno, LOGGER_AND_LOCAL);
+		return;
+	}
+	
+	if(mq_close(MQ) != 0)
+	{
+		Log_Msg(BB_TivaComm, "ERROR", "SendToLCThreadQ() => mq_close(), attempted to close LC queue", errno, LOGGER_AND_LOCAL);
+	}
+}
+
+//void SendToTivaCommThreadQ(uint8_t Buffer[], uint8_t StructSize)
+//{
+//	
+//	Log_Msg(BB_NFC, "DEBUG", " REACHED SendToTivaCommThreadQ!", 0, LOCAL_ONLY);
+//	
+//	printf("sizeof buffer: %d\n\n", StructSize);
+//	
+//	mqd_t MQ;						//Message queue descriptor
+//		
+//	/* Open the TivaComm Thread POSIX queue - write only */
+//	MQ = mq_open(TIVACOMM_POSIX_Q, O_WRONLY | O_CLOEXEC);		//NOTE: IF YOU GET AN 'O_CLOEXEC' UNDEFINED ERROR ADD -D_GNU_SOURCE TO COMPILER OPTIONS
+//	
+//	
+//	char ErrMsg[MSGSTR_SIZE];								//Temp variable
+//	
+//	
+//	/* Error check */
+//	if(MQ == (mqd_t) -1)
+//	{
+//		snprintf(ErrMsg, MSGSTR_SIZE, "SendToTivaCommThreadQ() => mq_open(), attempted to open TivaComm queue");
+//		Log_Msg(BB_NFC, "ERROR", ErrMsg, errno, LOGGER_AND_LOCAL);
+//		return;
+//	}
+//	
+//	/* Send Struct to POSIX queue */
+//	if(mq_send(MQ, &Buffer, StructSize, 0) != 0)
+//	{
+//		snprintf(ErrMsg, MSGSTR_SIZE, "SendToTivaCommThreadQ() => mq_send(), attempted to send buffer struct to TivaComm queue");
+//		Log_Msg(BB_NFC, "ERROR", ErrMsg, errno, LOGGER_AND_LOCAL);
+//		return;
+//	}
+//	
+//	if(mq_close(MQ) != 0)
+//	{
+//		Log_Msg(BB_NFC, "ERROR", "SendToTivaCommThreadQ() => mq_close(), attempted to close TivaComm queue", errno, LOGGER_AND_LOCAL);
+//	}
+//}
+
+
+
 void Log_Msg(uint8_t Src, char* LogLvl, char* OutMsg, int errnum, uint8_t Mode)
 {
 	/* Get name of source */
@@ -221,6 +374,10 @@ void Log_Msg(uint8_t Src, char* LogLvl, char* OutMsg, int errnum, uint8_t Mode)
 	/* Temp variable to store current date/time */
 	char CurTime[TIMESTR_SIZE]; 
 			
+	
+	/* LOCK */
+	pthread_mutex_lock(&LogLock);
+			
 	/* Output message depending on chosen mode */
 	switch(Mode)
 	{
@@ -239,31 +396,11 @@ void Log_Msg(uint8_t Src, char* LogLvl, char* OutMsg, int errnum, uint8_t Mode)
 			printf("> [%s] Log Event(%s): %s\n> L->Source: %s\n\n", CurTime, LogLvl, Output_Log, Source_text);
 			break;
 	}
+	
+	/* UNLOCK */
+	pthread_mutex_unlock(&LogLock);
 }
 
 
 
-void Send_NFCStruct_ToTiva()
-{
-//	/* Create the struct to send */
-//	LogMsg_Struct StructToSend =
-//	{
-//	 	 .ID = LogMsg_Struct_ID,
-//		 .Src = Src
-//	};
-//	strcpy(StructToSend.LogLevel, LogLvl);
-//	strcpy(StructToSend.Msg, OutMsg);
-//
-//	/* Create an array of bytes to fit the given struct */
-//	uint8_t Buffer_Struct[sizeof(StructToSend)+1];
-//
-//	/* Copy the contents of our struct to the char array */
-//	memcpy(Buffer_Struct, &StructToSend, sizeof(StructToSend));
-//
-//	/* Send Struct to BBComm Task xQueue - Wait for 10 ticks if xQueue is full */
-//	if ( (xQueueSend( xQueue_TXStruct, &StructToSend, ( TickType_t ) 10 ) ) != pdTRUE)
-//	{
-//		Log_Msg(Src, "ERROR", "Could not send LogMsgStruct to xQueue_TXStruct", LOCAL_ONLY);
-//	}
-}
 

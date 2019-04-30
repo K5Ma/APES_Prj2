@@ -15,6 +15,7 @@
 #include <mqueue.h>
 #include <unistd.h>
 #include <errno.h>
+#include <pthread.h>
 
 //My includes
 #include "Global_Defines.h"
@@ -25,7 +26,8 @@
 /* Global Variables */
 extern UART_Struct *BB_UART1;
 extern bool POLL_RX;
-
+extern pthread_mutex_t TXLock; 
+extern pthread_mutex_t RXLock; 
 
 
 void * TivaCommThread(void * args)
@@ -79,21 +81,29 @@ void * TivaCommThread(void * args)
 	/* Create an array of bytes to fit any given struct */
 	uint8_t TX_Struct_Buffer[MAX_STRUCT_SIZE];
 	
+	/* Used to keep track of the RX array */
+	int16_t RX_Index = -1;
+			
+	/* Create a pointer that will iterate through the array and RX from Tiva side */
+	uint8_t* ptr = NULL;
+
 	
 	while(1)
 	{
 		/* If we need to RX something: */
 		if(POLL_RX)
 		{
-			int16_t RX_Index = -1;
+			Log_Msg(BB_TivaComm, "DEBUG", "STARTING RX POLL", 0, LOCAL_ONLY);
 			
-		//	Log_Msg(BB_TivaComm, "DEBUG", "STARTING RX POLL", 0, LOCAL_ONLY);
+			/* LOCK */
+			pthread_mutex_lock(&RXLock);
 			
 			/* Create an array of bytes to fit the given struct */
 			uint8_t RX_Struct_Buffer[MAX_STRUCT_SIZE];
 			
-			/* Create a pointer that will iterate through the array and RX from Tiva side */
-			uint8_t* ptr = &RX_Struct_Buffer;
+			/* Reset */
+			RX_Index = -1;
+			ptr = &RX_Struct_Buffer;
 			
 			/* Keep adding to the buffer until we get a "!" */
 			do
@@ -111,29 +121,50 @@ void * TivaCommThread(void * args)
 				}
 			} while ( RX_Struct_Buffer[RX_Index] != END_CMD_CHAR );
 			
+
+//			for(uint8_t i = 0; i < RX_Index; i++)
+//			{
+//				printf("DEBUG: RX_Struct_Buffer[%u]: %u | %c\n", i, RX_Struct_Buffer[i], RX_Struct_Buffer[i]);
+//			}
+
+
+			/* UNLOCK */
+			pthread_mutex_unlock(&RXLock);
+				
+			
 			RX_Struct_Buffer[RX_Index] = '\x00';
 			
-		//	Log_Msg(BB_TivaComm, "DEBUG", "GOT STRUCT", 0, LOCAL_ONLY);
+			Log_Msg(BB_TivaComm, "DEBUG", "GOT STRUCT", 0, LOCAL_ONLY);
 			
 			Decode_StructBuffer(RX_Struct_Buffer);
 			
 			POLL_RX = false;
 		}
-
+		
 		/* Else, check if we need to TX something */
-	//	else if ( (mq_receive(MQ, TX_Struct_Buffer, sizeof(MAX_STRUCT_SIZE), NULL) ) != -1 )
-	//	{
-			Log_Msg(BB_TivaComm, "DEBUG", "GOT STRUCT TO TX!", 0, LOCAL_ONLY);
-			
-			Send_String_UARTx(BB_UART1, START_CMD);                       //Send Start CMD to Tiva
-			
-			//NEED TO TX STRCUT HERE
-			Send_StructBuffer_UARTx(UART_Struct *UART, uint8_t* StructToSend);
-			
-			Send_String_UARTx(BB_UART1, END_CMD);                         //Send END CMD to Tiva
-			
-			while(1);
-//		}
+		else
+		{
+			if ( (mq_receive(MQ, TX_Struct_Buffer, MAX_STRUCT_SIZE, NULL) ) != -1 )
+			{
+			//	Log_Msg(BB_TivaComm, "DEBUG", "SENDING STRUCT TO TIVA", 0, LOCAL_ONLY);
+				
+				/* LOCK */
+				pthread_mutex_lock(&TXLock);
+	
+				Send_String_UARTx(BB_UART1, START_CMD);                       //Send Start CMD to Tiva
+				
+				Send_String_UARTx(BB_UART1, (char *)TX_Struct_Buffer);        //Sending struct buffer 
+				
+				Send_String_UARTx(BB_UART1, END_CMD);                         //Send END CMD to Tiva
+				Send_String_UARTx(BB_UART1, END_CMD);                         //Send END CMD to Tiva
+				Send_String_UARTx(BB_UART1, END_CMD);                         //Send END CMD to Tiva
+				Send_String_UARTx(BB_UART1, END_CMD);                         //Send END CMD to Tiva
+				
+				/* UNLOCK */
+				pthread_mutex_unlock(&TXLock);
+			}
+		}
+
 	}
 	
 	
@@ -158,9 +189,14 @@ void * TivaCommThread(void * args)
 
 void Decode_StructBuffer(uint8_t* StructToDecode)
 {
+	char TmpTxt[100];
 	
 	/* Create the needed structs that will store buffer contents */
 	LogMsg_Struct LogMsgToSend;
+	NFC_T2B_Struct NFC_T2BToSend;
+	KE_T2B_Struct KE_T2BToSend;
+	LC_T2B_Struct LC_T2BToSend;
+			
 			
 	/* Get what structure it is, based on the first byte */
 	switch( StructToDecode[0] )
@@ -174,92 +210,46 @@ void Decode_StructBuffer(uint8_t* StructToDecode)
 			/* Send to Logger POSIX Q */
 			Log_Msg(LogMsgToSend.Src, LogMsgToSend.LogLevel, LogMsgToSend.Msg, 0, LOGGER_AND_LOCAL);
 			break;
+			
+
+		case NFC_T2B_Struct_ID:
+		//	Log_Msg(BB_TivaComm, "DEBUG", "STRUCTURE TO DECODE IS NFC_T2B", 0, LOCAL_ONLY);
+			
+			/* Copy the contents of the buffer to the struct */
+			memcpy(&NFC_T2BToSend , StructToDecode, sizeof(NFC_T2B_Struct));
+			
+			/* Send to NFC POSIX Q */
+			SendToNFCThreadQ(NFC_T2BToSend);
+			break;
+			
+			
+		case KE_T2B_Struct_ID:
+		//	Log_Msg(BB_TivaComm, "DEBUG", "STRUCTURE TO DECODE IS KE_T2B_Struct", 0, LOCAL_ONLY);
+			
+			/* Copy the contents of the buffer to the struct */
+			memcpy(&KE_T2BToSend , StructToDecode, sizeof(KE_T2B_Struct));
+	
+			/* Send to KeypadEpaper POSIX Q */
+			SendToKEThreadQ(KE_T2BToSend);
+			break;
+			
+			
+		case LC_T2B_Struct_ID:
+//			Log_Msg(BB_TivaComm, "DEBUG", "STRUCTURE TO DECODE IS LC_T2B_Struct", 0, LOCAL_ONLY);
+			
+			/* Copy the contents of the buffer to the struct */
+			memcpy(&LC_T2BToSend , StructToDecode, sizeof(LC_T2B_Struct));
+	
+			/* Send to LoadCell POSIX Q */
+			SendToLCThreadQ(LC_T2BToSend);
+			break;
 
 
 
 		default:
-			Log_Msg(BB_TivaComm, "ERROR", "Decode_StructBuffer() aborted - unknown structure!", 0, LOCAL_ONLY);
+			snprintf(TmpTxt, 100, "Decode_StructBuffer() aborted - unknown structure! ID: %u | Src: %u", StructToDecode[0], StructToDecode[1]);
+			Log_Msg(BB_TivaComm, "ERROR", TmpTxt, 0, LOCAL_ONLY);
 			return;
 	}
 }
-
-
-//HUGE TEST STRUCT IF NEEDED	
-//	//TEST STRUCTURE 
-//	TivaBB_MsgStruct TESTSTRUCT;
-//	
-//	/* NFC */
-//	TESTSTRUCT.T_NFC_Tag_ID_Array[0] = 2;
-//	TESTSTRUCT.T_NFC_Tag_ID_Array[1] = 2; 
-//	TESTSTRUCT.T_NFC_Tag_ID_Array[2] = 2; 
-//	TESTSTRUCT.T_NFC_Tag_ID_Array[3] = 2; 
-//	TESTSTRUCT.T_NFC_Error = true;
-//	
-//	/* EPaper */
-//	TESTSTRUCT.T_EP_Error = true;
-//	TESTSTRUCT.B_Update_EPaper = true;
-//	strcpy(TESTSTRUCT.B_Image_Name, "Khalid:)");
-//	
-//	/* KeyPad */
-//	TESTSTRUCT.T_KeyPad_Code[0] = 2;
-//	TESTSTRUCT.T_KeyPad_Code[1] = 2;
-//	TESTSTRUCT.T_KeyPad_Code[2] = 2;
-//	TESTSTRUCT.T_KeyPad_Code[3] = 2;
-//	TESTSTRUCT.T_KeyPad_Code[4] = 2;
-//	TESTSTRUCT.T_KeyPad_Code[5] = 2;
-//	TESTSTRUCT.T_KeyPad_Error = true;
-//	TESTSTRUCT.B_KeyPad_Poll = true;
-//	
-//	/* Load Cell */
-//	TESTSTRUCT.T_LC_SamplesArraymv[0] = 2;
-//	TESTSTRUCT.T_LC_SamplesArraymv[1] = 2;
-//	TESTSTRUCT.T_LC_SamplesArraymv[2] = 2;
-//	TESTSTRUCT.T_LC_SamplesArraymv[3] = 2;
-//	TESTSTRUCT.T_LC_SamplesArraymv[4] = 2;
-//	TESTSTRUCT.T_LC_SamplesArraymv[5] = 2;
-//	TESTSTRUCT.T_LC_SamplesArraymv[6] = 2;
-//	TESTSTRUCT.T_LC_SamplesArraymv[7] = 2;
-//	TESTSTRUCT.T_LC_SamplesArraymv[8] = 2;
-//	TESTSTRUCT.T_LC_SamplesArraymv[9] = 2;
-//	TESTSTRUCT.T_LC_SamplesArraymv[10] = 2;
-//	TESTSTRUCT.T_LC_SamplesArraymv[11] = 2;
-//	TESTSTRUCT.T_LC_SamplesArraymv[12] = 2;
-//	TESTSTRUCT.T_LC_SamplesArraymv[13] = 2;
-//	TESTSTRUCT.T_LC_SamplesArraymv[14] = 2;
-//	TESTSTRUCT.T_LC_SamplesArraymv[15] = 2;
-//	TESTSTRUCT.T_LC_SamplesArraymv[16] = 2;
-//	TESTSTRUCT.T_LC_SamplesArraymv[17] = 2;
-//	TESTSTRUCT.T_LC_SamplesArraymv[18] = 2;
-//	TESTSTRUCT.T_LC_SamplesArraymv[19] = 2;
-//	TESTSTRUCT.T_LC_Error = true;
-//	TESTSTRUCT.B_Poll_LoadCell = true;
-//	
-//	/* BME280 */
-//	TESTSTRUCT.T_BME280_milliTemperatureCelcius = -20;
-//	TESTSTRUCT.T_BME280_milliHumidityPercent = 29;
-//	TESTSTRUCT.T_BME280_Error = true;
-//	
-//	/* Lux */
-//	TESTSTRUCT.T_Lux_Level = 2;
-//	TESTSTRUCT.T_Lux_Error = true;
-//	TESTSTRUCT.B_Lux_Disable = true;
-//	
-//	/* Gas */
-//	TESTSTRUCT.T_Gas_Level = 2;
-//	TESTSTRUCT.T_Gas_Error = true;
-//	
-//	/* PIR */
-//	TESTSTRUCT.T_PIR_State = true;
-//	TESTSTRUCT.B_PIR_Disable = true;
-//	
-//	/* SpeakJet */
-//	TESTSTRUCT.T_SJ_Data = 2;
-//	
-//	/* Servo */
-//	TESTSTRUCT.B_Servo_Open = true;
-//	
-//	/* Output Indicators */
-//	TESTSTRUCT.B_OI_Data = 2;
-	
-	
 

@@ -19,10 +19,18 @@
 
 
 /* Global Variables */
+pthread_mutex_t LogLock; 								//Used to lock when printing out log msgs
+pthread_mutex_t TXLock; 								//Used to lock when TXing
+pthread_mutex_t RXLock; 								//Used to lock when RXing
 struct sigaction UART1_RX_SignalAction;                 //Used in the Init_UART for UART1
 char Start_RX[1] = "0";                                 //Will store the start CMD coming in from Tiva
 UART_Struct *BB_UART1;                                  //Global struct of UART1 as it is used in two files (TivaComm and My_UART)
 volatile bool POLL_RX = false;                          //Flag used to know if we are currently RXing from Tiva or not 
+
+//Poorn
+// Global Variables that are shared between threads
+char Check_Code[6];
+bool Person_ID; //0: Poorn, 1: Khalid
 
 
 /* LAST WORKING ON:
@@ -138,6 +146,23 @@ int main(int argc, char **argv)
 
 	/* Store filepath to pass to pThreads */
 	strcpy(args.LogFile_Path, User_LogFilePath);
+	
+	
+	/* Create needed locks */
+	if( pthread_mutex_init(&LogLock, NULL) != 0)
+	{
+		Log_Msg(BB_Main, "ERROR", "Could not init LogLock mutex!", errno, LOCAL_ONLY);
+	}
+	
+	if( pthread_mutex_init(&TXLock, NULL) != 0)
+	{
+		Log_Msg(BB_Main, "ERROR", "Could not init TXLock mutex!", errno, LOCAL_ONLY);
+	}
+	
+	if( pthread_mutex_init(&RXLock, NULL) != 0)
+	{
+		Log_Msg(BB_Main, "ERROR", "Could not init RXLock mutex!", errno, LOCAL_ONLY);
+	}
 
 	
 	/* Create the needed pThreads */

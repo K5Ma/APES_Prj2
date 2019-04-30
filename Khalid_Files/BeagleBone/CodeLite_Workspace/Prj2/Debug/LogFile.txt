@@ -1,4 +1,4 @@
-> [Sun Apr 28 03:00:51] Log Event(INFO): Logfile successfully created! TID: 17435
+> [Mon Apr 29 20:14:54] Log Event(INFO): Logfile successfully created! TID: 26311
 > L->Source: Logger Thread
 
 
@@ -11,12 +11,216 @@
 > *              'O'bviously 'M'arvelous            *
 > *                                                 *
 > *        By: Khalid AlAwadhi | Poorn Mehta        *
-> *                                            v1.5 *
+> *                                            v1.9 *
 > ***************************************************
 
-> [Sun Apr 28 03:00:52] Log Event(INFO): SUCCESS: Created TivaComm Thread!
+> [Mon Apr 29 20:14:55] Log Event(INFO): SUCCESS: Created TivaComm Thread!
 > L->Source: Main Thread
 
-> [Sun Apr 28 03:00:52] Log Event(INFO): UART1 port initialized successfully
+> [Mon Apr 29 20:14:55] Log Event(INFO): UART1 port initialized successfully
 > L->Source: TivaComm Thread
+
+> [Mon Apr 29 20:14:56] Log Event(INFO): SUCCESS: Created NFC Thread!
+> L->Source: Main Thread
+
+> [Mon Apr 29 20:14:56] Log Event(INFO): SUCCESS: Created KeypadEpaper Thread!
+> L->Source: Main Thread
+
+> [Mon Apr 29 20:14:56] Log Event(INFO): SUCCESS: Created LoadCell Thread!
+> L->Source: Main Thread
+
+> [Mon Apr 29 20:15:02] Log Event(INFO): Waking up the Module
+> L->Source: NFC Task
+
+> [Mon Apr 29 20:15:03] Log Event(INFO): NFC Module Initialization Succeeded
+> L->Source: NFC Task
+
+> [Mon Apr 29 20:15:03] Log Event(INFO): NFC Firmwave Version Verification Succeeded
+> L->Source: NFC Task
+
+> [Mon Apr 29 20:15:03] Log Event(INFO): Starting NFC Normal Operation
+> L->Source: NFC Task
+
+> [Mon Apr 29 20:15:04] Log Event(INFO): Startup Handshake Succeeded
+> L->Source: KeypadEpaper Task
+
+> [Mon Apr 29 20:15:04] Log Event(INFO): Storage Set Succeeded
+> L->Source: KeypadEpaper Task
+
+> [Mon Apr 29 20:15:04] Log Event(INFO): Starting KE Normal Operation
+> L->Source: KeypadEpaper Task
+
+> [Mon Apr 29 20:15:07] Log Event(INFO): Tag ID: F4:95:A6:94
+> L->Source: NFC Task
+
+> [Mon Apr 29 20:15:07] Log Event(INFO): Tag of Khalid is Verified... Stage 1 Succeeded
+> L->Source: NFC Thread
+
+> [Mon Apr 29 20:15:13] Log Event(INFO): Tag of Khalid is Verified... Stage 1 Succeeded
+> L->Source: NFC Thread
+
+> [Mon Apr 29 20:15:29] Log Event(INFO): Checking Code...
+> L->Source: KeypadEpaper Thread
+
+> [Mon Apr 29 20:15:29] Log Event(INFO): Code Verified... Stage 2 Succeeded
+> L->Source: KeypadEpaper Thread
+
+> [Mon Apr 29 20:16:10] Log Event(INFO): NFC Module Initialization Succeeded
+> L->Source: NFC Task
+
+> [Mon Apr 29 20:16:10] Log Event(INFO): NFC Firmwave Version Verification Succeeded
+> L->Source: NFC Task
+
+> [Mon Apr 29 20:16:11] Log Event(INFO): Starting NFC Normal Operation
+> L->Source: NFC Task
+
+> [Mon Apr 29 20:16:11] Log Event(INFO): Startup Handshake Succeeded
+> L->Source: KeypadEpaper Task
+
+> [Mon Apr 29 20:16:11] Log Event(INFO): Storage Set Succeeded
+> L->Source: KeypadEpaper Task
+
+> [Mon Apr 29 20:16:12] Log Event(INFO): Starting KE Normal Operation
+> L->Source: KeypadEpaper Task
+
+> [Mon Apr 29 20:16:14] Log Event(INFO): Tag ID: F4:95:A6:94
+> L->Source: NFC Task
+
+> [Mon Apr 29 20:16:14] Log Event(INFO): Tag of Khalid is Verified... Stage 1 Succeeded
+> L->Source: NFC Thread
+
+> [Mon Apr 29 20:16:27] Log Event(INFO): Checking Code...
+> L->Source: KeypadEpaper Thread
+
+> [Mon Apr 29 20:16:27] Log Event(INFO): Code Verified... Stage 2 Succeeded
+> L->Source: KeypadEpaper Thread
+
+> [Mon Apr 29 20:16:35] Log Event(INFO): Tag of Khalid is Verified... Stage 1 Succeeded
+> L->Source: NFC Thread
+
+> [Mon Apr 29 20:16:47] Log Event(INFO): Checking Code...
+> L->Source: KeypadEpaper Thread
+
+> [Mon Apr 29 20:16:47] Log Event(INFO): Code Verified... Stage 2 Succeeded
+> L->Source: KeypadEpaper Thread
+
+> [Mon Apr 29 20:17:25] Log Event(INFO): NFC Module Initialization Succeeded
+> L->Source: NFC Task
+
+> [Mon Apr 29 20:17:25] Log Event(INFO): NFC Firmwave Version Verification Succeeded
+> L->Source: NFC Task
+
+> [Mon Apr 29 20:17:25] Log Event(INFO): Starting NFC Normal Operation
+> L->Source: NFC Task
+
+> [Mon Apr 29 20:17:25] Log Event(INFO): Startup Handshake Succeeded
+> L->Source: KeypadEpaper Task
+
+> [Mon Apr 29 20:17:26] Log Event(INFO): Tag ID: F4:95:A6:94
+> L->Source: NFC Task
+
+> [Mon Apr 29 20:17:26] Log Event(INFO): Tag of Khalid is Verified... Stage 1 Succeeded
+> L->Source: NFC Thread
+
+> [Mon Apr 29 20:17:26] Log Event(INFO): Checking Code...
+> L->Source: KeypadEpaper Thread
+
+> [Mon Apr 29 20:17:26] Log Event(ERROR): Incorrect Code Entered... Stage 2 Failed
+> L->Source: KeypadEpaper Thread
+
+> [Mon Apr 29 20:17:27] Log Event(INFO): Starting KE Normal Operation
+> L->Source: KeypadEpaper Task
+
+> [Mon Apr 29 20:17:31] Log Event(INFO): Tag ID: F4:95:A6:94
+> L->Source: NFC Task
+
+> [Mon Apr 29 20:17:31] Log Event(INFO): Tag of Khalid is Verified... Stage 1 Succeeded
+> L->Source: NFC Thread
+
+> [Mon Apr 29 20:17:41] Log Event(INFO): Checking Code...
+> L->Source: KeypadEpaper Thread
+
+> [Mon Apr 29 20:17:41] Log Event(ERROR): Incorrect Code Entered... Stage 2 Failed
+> L->Source: KeypadEpaper Thread
+
+> [Mon Apr 29 20:17:51] Log Event(INFO): Tag ID: F4:95:A6:94
+> L->Source: NFC Task
+
+> [Mon Apr 29 20:17:51] Log Event(INFO): Tag of Khalid is Verified... Stage 1 Succeeded
+> L->Source: NFC Thread
+
+> [Mon Apr 29 20:18:03] Log Event(INFO): Checking Code...
+> L->Source: KeypadEpaper Thread
+
+> [Mon Apr 29 20:18:03] Log Event(INFO): Code Verified... Stage 2 Succeeded
+> L->Source: KeypadEpaper Thread
+
+> [Mon Apr 29 20:18:29] Log Event(INFO): Tag of Khalid is Verified... Stage 1 Succeeded
+> L->Source: NFC Thread
+
+> [Mon Apr 29 20:18:52] Log Event(INFO): Tag ID: F4:95:A6:94
+> L->Source: NFC Task
+
+> [Mon Apr 29 20:18:52] Log Event(INFO): Tag of Khalid is Verified... Stage 1 Succeeded
+> L->Source: NFC Thread
+
+> [Mon Apr 29 20:19:04] Log Event(INFO): Checking Code...
+> L->Source: KeypadEpaper Thread
+
+> [Mon Apr 29 20:19:04] Log Event(INFO): Code Verified... Stage 2 Succeeded
+> L->Source: KeypadEpaper Thread
+
+> [Mon Apr 29 20:19:31] Log Event(INFO): NFC Module Initialization Succeeded
+> L->Source: NFC Task
+
+> [Mon Apr 29 20:19:32] Log Event(INFO): NFC Firmwave Version Verification Succeeded
+> L->Source: NFC Task
+
+> [Mon Apr 29 20:19:32] Log Event(INFO): Starting NFC Normal Operation
+> L->Source: NFC Task
+
+> [Mon Apr 29 20:19:32] Log Event(INFO): Startup Handshake Succeeded
+> L->Source: KeypadEpaper Task
+
+> [Mon Apr 29 20:19:33] Log Event(INFO): Storage Set Succeeded
+> L->Source: KeypadEpaper Task
+
+> [Mon Apr 29 20:19:33] Log Event(INFO): Starting KE Normal Operation
+> L->Source: KeypadEpaper Task
+
+> [Mon Apr 29 20:19:37] Log Event(INFO): Tag ID: F4:95:A6:94
+> L->Source: NFC Task
+
+> [Mon Apr 29 20:19:37] Log Event(INFO): Tag of Khalid is Verified... Stage 1 Succeeded
+> L->Source: NFC Thread
+
+> [Mon Apr 29 20:19:43] Log Event(INFO): Tag ID: F4:95:A6:94
+> L->Source: NFC Task
+
+> [Mon Apr 29 20:19:43] Log Event(INFO): Tag of Khalid is Verified... Stage 1 Succeeded
+> L->Source: NFC Thread
+
+> [Mon Apr 29 20:19:57] Log Event(INFO): Checking Code...
+> L->Source: KeypadEpaper Thread
+
+> [Mon Apr 29 20:19:57] Log Event(INFO): Code Verified... Stage 2 Succeeded
+> L->Source: KeypadEpaper Thread
+
+> [Mon Apr 29 20:20:04] Log Event(INFO): Tag of Khalid is Verified... Stage 1 Succeeded
+> L->Source: NFC Thread
+
+> [Mon Apr 29 20:20:11] Log Event(INFO): Tag of Khalid is Verified... Stage 1 Succeeded
+> L->Source: NFC Thread
+
+> [Mon Apr 29 20:20:17] Log Event(INFO): Tag of Khalid is Verified... Stage 1 Succeeded
+> L->Source: NFC Thread
+
+> [Mon Apr 29 20:20:24] Log Event(INFO): Tag of Khalid is Verified... Stage 1 Succeeded
+> L->Source: NFC Thread
+
+> [Mon Apr 29 20:20:37] Log Event(INFO): Checking Code...
+> L->Source: KeypadEpaper Thread
+
+> [Mon Apr 29 20:20:37] Log Event(INFO): Code Verified... Stage 2 Succeeded
+> L->Source: KeypadEpaper Thread
 

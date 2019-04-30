@@ -49,7 +49,7 @@ void * LoggerThread(void * args)
 	/* Initialize the queue attributes */
 	struct mq_attr attr;
 	attr.mq_flags = 0;									/* Flags: 0 or O_NONBLOCK */
-	attr.mq_maxmsg = 10;								/* Max. # of messages on queue */
+	attr.mq_maxmsg = 50;								/* Max. # of messages on queue */
 	attr.mq_msgsize = sizeof(LogMsg_Struct);			/* Max. message size (bytes) */
 	attr.mq_curmsgs = 0;								/* # of messages currently in queue */
 
