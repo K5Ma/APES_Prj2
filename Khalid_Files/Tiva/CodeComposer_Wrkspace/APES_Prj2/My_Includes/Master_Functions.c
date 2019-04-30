@@ -210,9 +210,84 @@ void Send_LogMsgStruct_ToBB(uint8_t Src, char* LogLvl, char* OutMsg)
 	memcpy(Buffer_Struct, &StructToSend, sizeof(StructToSend));
 
 	/* Send Struct to BBComm Task xQueue - Wait for 10 ticks if xQueue is full */
-	if ( (xQueueSend( xQueue_TXStruct, &StructToSend, ( TickType_t ) 10 ) ) != pdTRUE)
+	if ( (xQueueSend( xQueue_TXStruct, &Buffer_Struct, ( TickType_t ) 10 ) ) != pdTRUE)
 	{
 		Log_Msg(Src, "ERROR", "Could not send LogMsgStruct to xQueue_TXStruct", LOCAL_ONLY);
 	}
 }
+
+
+
+void Send_NFCStruct_ToBB(NFC_T2B_Struct StructToSend)
+{
+	taskENTER_CRITICAL();
+
+	/* Update the struct with needed parameters */
+	StructToSend.ID = NFC_T2B_Struct_ID;
+	StructToSend.Src = T_NFC;
+
+	/* Create an array of bytes to fit the given struct */
+	uint8_t Buffer_Struct[sizeof(StructToSend)+1];
+
+	/* Copy the contents of our struct to the char array */
+	memcpy(Buffer_Struct, &StructToSend, sizeof(StructToSend));
+
+	/* Send Struct to BBComm Task xQueue - Wait for 10 ticks if xQueue is full */
+	if ( (xQueueSend( xQueue_TXStruct, &Buffer_Struct, ( TickType_t ) 10 ) ) != pdTRUE)
+	{
+		Log_Msg(StructToSend.Src, "ERROR", "Could not send NFC_T2B_Struct to xQueue_TXStruct", LOCAL_ONLY);
+	}
+
+	taskEXIT_CRITICAL();
+}
+
+
+void Send_KE_T2B_Struct_ToBB(KE_T2B_Struct StructToSend)
+{
+	taskENTER_CRITICAL();
+
+	/* Update the struct with needed parameters */
+	StructToSend.ID = KE_T2B_Struct_ID;
+	StructToSend.Src = T_KeypadEpaper;
+
+	/* Create an array of bytes to fit the given struct */
+	uint8_t Buffer_Struct[sizeof(StructToSend)+1];
+
+	/* Copy the contents of our struct to the char array */
+	memcpy(Buffer_Struct, &StructToSend, sizeof(StructToSend));
+
+	/* Send Struct to BBComm Task xQueue - Wait for 10 ticks if xQueue is full */
+	if ( (xQueueSend( xQueue_TXStruct, &Buffer_Struct, ( TickType_t ) 10 ) ) != pdTRUE)
+	{
+		Log_Msg(StructToSend.Src, "ERROR", "Could not send KE_T2B_Struct to xQueue_TXStruct", LOCAL_ONLY);
+	}
+
+	taskEXIT_CRITICAL();
+}
+
+
+
+void Send_LC_T2B_Struct_ToBB(LC_T2B_Struct StructToSend)
+{
+	taskENTER_CRITICAL();
+
+	/* Update the struct with needed parameters */
+	StructToSend.ID = LC_T2B_Struct_ID;
+	StructToSend.Src = T_LoadCell;
+
+	/* Create an array of bytes to fit the given struct */
+	uint8_t Buffer_Struct[sizeof(StructToSend)+1];
+
+	/* Copy the contents of our struct to the char array */
+	memcpy(Buffer_Struct, &StructToSend, sizeof(StructToSend));
+
+	/* Send Struct to BBComm Task xQueue - Wait for 10 ticks if xQueue is full */
+	if ( (xQueueSend( xQueue_TXStruct, &Buffer_Struct, ( TickType_t ) 10 ) ) != pdTRUE)
+	{
+		Log_Msg(StructToSend.Src, "ERROR", "Could not send LC_T2B_Struct to xQueue_TXStruct", LOCAL_ONLY);
+	}
+
+	taskEXIT_CRITICAL();
+}
+
 

@@ -42,12 +42,10 @@
 QueueHandle_t xQueue_TXStruct = NULL;				//This is the queue the BB_Comm Task will read from and other tasks will send to
 char Start_RX[1] = "0";								//Will store the start CMD coming in from BB
 volatile bool POLL_RX = false;						//Flag used to know if we are currently RXing from BB or not
+QueueHandle_t xQueue_KEStruct = NULL;				//This is the queue the will get any KE structs from BB
+QueueHandle_t xQueue_LCStruct = NULL;				//This is the queue the will get any LC structs from BB
+QueueHandle_t xQueue_OIStruct = NULL;				//This is the queue the will get any OI structs from BB
 
-
-/* LAST WORKING ON:
- *
- *
- */
 
 
 /*
@@ -189,35 +187,35 @@ int main()
 		Log_Msg(T_Main, "INFO", "NFC Task init successfully!", LOCAL_ONLY);
 	}
 
-//	/* Init KeypadEpaper Task */
-//	if(KeypadEpaper_TaskInit())
-//	{
-//		Log_Msg(T_Main, "CRITICAL", "Could not init KeypadEpapaer Task!", LOCAL_ONLY);
-//	}
-//	else
-//	{
-//		Log_Msg(T_Main, "INFO", "KeypadEpapaer Task init successfully!", LOCAL_ONLY);
-//	}
-//
-//	/* Init LoadCell Task */
-//	if(LoadCell_TaskInit())
-//	{
-//		Log_Msg(T_Main, "CRITICAL", "Could not init LoadCell Task!", LOCAL_ONLY);
-//	}
-//	else
-//	{
-//		Log_Msg(T_Main, "INFO", "LoadCell Task init successfully!", LOCAL_ONLY);
-//	}
+	/* Init KeypadEpaper Task */
+	if(KeypadEpaper_TaskInit())
+	{
+		Log_Msg(T_Main, "CRITICAL", "Could not init KeypadEpapaer Task!", LOCAL_ONLY);
+	}
+	else
+	{
+		Log_Msg(T_Main, "INFO", "KeypadEpapaer Task init successfully!", LOCAL_ONLY);
+	}
 
-//	/* Init Outputs Task */
-//	if(Outputs_TaskInit())
-//	{
-//		Log_Msg(T_Main, "CRITICAL", "Could not init Outputs Task!", LOCAL_ONLY);
-//	}
-//	else
-//	{
-//		Log_Msg(T_Main, "INFO", "Outputs Task init successfully!", LOCAL_ONLY);
-//	}
+	/* Init LoadCell Task */
+	if(LoadCell_TaskInit())
+	{
+		Log_Msg(T_Main, "CRITICAL", "Could not init LoadCell Task!", LOCAL_ONLY);
+	}
+	else
+	{
+		Log_Msg(T_Main, "INFO", "LoadCell Task init successfully!", LOCAL_ONLY);
+	}
+
+	/* Init Outputs Task */
+	if(Outputs_TaskInit())
+	{
+		Log_Msg(T_Main, "CRITICAL", "Could not init Outputs Task!", LOCAL_ONLY);
+	}
+	else
+	{
+		Log_Msg(T_Main, "INFO", "Outputs Task init successfully!", LOCAL_ONLY);
+	}
 
 	vTaskStartScheduler();
 	return 0;

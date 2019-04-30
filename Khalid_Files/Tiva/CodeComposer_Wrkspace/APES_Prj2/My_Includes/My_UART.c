@@ -116,8 +116,25 @@ bool Send_StructBuffer_UARTx(uint8_t UART_Num, uint8_t* StructToSend)
 	switch( StructToSend[0] )
 	{
 		case LogMsg_Struct_ID:
-			Log_Msg(T_BBComm, "DEBUG", "STRUCTURE TO SEND IS LOGMSG", LOCAL_ONLY);
+		//	Log_Msg(T_BBComm, "DEBUG", "STRUCTURE TO SEND IS LOGMSG", LOCAL_ONLY);
 			SizeOfStruct = sizeof(LogMsg_Struct);
+			break;
+
+		case NFC_T2B_Struct_ID:
+		//	Log_Msg(T_BBComm, "DEBUG", "STRUCTURE TO SEND IS NFC_T2B", LOCAL_ONLY);
+			SizeOfStruct = sizeof(NFC_T2B_Struct);
+			break;
+
+		case KE_T2B_Struct_ID:
+			UART_Putchar(UARTBase[UART_Num], '0');		//FIXES BUG ON BB SIDE WHERE THE FIST BYTE IS LOST??? SO THIS IS A THROWAWAY
+		//	Log_Msg(T_BBComm, "DEBUG", "STRUCTURE TO SEND IS KE_T2B", LOCAL_ONLY);
+			SizeOfStruct = sizeof(KE_T2B_Struct);
+			break;
+
+		case LC_T2B_Struct_ID:
+			UART_Putchar(UARTBase[UART_Num], '0');		//FIXES BUG ON BB SIDE WHERE THE FIST BYTE IS LOST??? SO THIS IS A THROWAWAY
+	//		Log_Msg(T_BBComm, "DEBUG", "STRUCTURE TO SEND IS LC_T2B", LOCAL_ONLY);
+			SizeOfStruct = sizeof(LC_T2B_Struct);
 			break;
 
 
@@ -244,9 +261,11 @@ void UART1_IntHandler(void)
 	{
 		Start_RX[0] = UARTCharGetNonBlocking(UART1_BASE);
 
-		if( strcmp(Start_RX, START_CMD) == 0 )
+		if( Start_RX[0] == START_CMD_CHAR )
 		{
 			POLL_RX = true;
+	//		UARTIntDisable(UART1_BASE, UART_INT_RX | UART_INT_RT);
+			Start_RX[0] = '\x00';
 		}
 	}
 }

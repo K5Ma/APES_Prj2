@@ -94,7 +94,7 @@ void Log_Msg(uint8_t Src, char* LogLvl, char* OutMsg, uint8_t Mode);
 
 
 /**************************************************************************************************************
- * USAGE: This function usues the given info to create a LogMsg_Struct and then send it to the BBComm xQueue
+ * USAGE: This function uses the given info to create a LogMsg_Struct and then send it to the BBComm xQueue
  *        to TX the struct over to the BeagleBone.
  *
  * PARAMETERS:
@@ -106,6 +106,38 @@ void Log_Msg(uint8_t Src, char* LogLvl, char* OutMsg, uint8_t Mode);
  **************************************************************************************************************/
 void Send_LogMsgStruct_ToBB(uint8_t Src, char* LogLvl, char* OutMsg);
 
+
+/**************************************************************************************************************
+ * USAGE: This function send a NFC struct to the BeagleBone. (NFC task to NFC pthread)
+ *
+ * PARAMETERS:
+ *            - NFC_T2B_Struct StructToSend => Struct to send
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void Send_NFCStruct_ToBB(NFC_T2B_Struct StructToSend);
+
+
+/**************************************************************************************************************
+ * USAGE: This function send a KE_T2B struct to the BeagleBone. (From KeypadEpaper task to KeypadEpaper pThread)
+ *
+ * PARAMETERS:
+ *            - KE_T2B_Struct StructToSend => Struct to send
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void Send_KE_T2B_Struct_ToBB(KE_T2B_Struct StructToSend);
+
+
+/**************************************************************************************************************
+ * USAGE: This function send a LC_T2B struct to the BeagleBone. (From LoadCell task to LoadCell pThread)
+ *
+ * PARAMETERS:
+ *            - LC_T2B_Struct StructToSend => Struct to send
+ *
+ * RETURNS: NONE
+ **************************************************************************************************************/
+void Send_LC_T2B_Struct_ToBB(LC_T2B_Struct StructToSend);
 
 
 #endif /* MY_INCLUDES_MASTER_FUNCTIONS_H_ */

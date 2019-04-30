@@ -11,12 +11,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-
 /////////////////////////////////////// COMMON BETWEEN TIVA AND BB ///////////////////////////////////////////////////////////
 /***************************************
  *   Current Program Version define    *
  ***************************************/
-#define CURRENT_VER 				"1.5"
+#define CURRENT_VER 				"1.9"
 
 
 /***************************************
@@ -52,6 +51,7 @@ typedef enum
  * or RXing                              *
  *****************************************/
 #define START_CMD                  "?"
+#define START_CMD_CHAR             '?'
 #define CONFIRM_CMD                "#"
 #define END_CMD                    "!"
 #define END_CMD_CHAR               '!'
@@ -81,8 +81,12 @@ typedef enum
 typedef enum
 {
 	LogMsg_Struct_ID = 1,
-	NFC_T2B_Struct_ID = 2
-
+	NFC_T2B_Struct_ID = 2,
+	KE_B2T_Struct_ID = 3,
+	KE_T2B_Struct_ID = 4,
+	LC_B2T_Struct_ID = 5,
+	LC_T2B_Struct_ID = 6,
+	OI_B2T_Struct_ID = 7
 } Struct_ID;
 
 
@@ -98,7 +102,8 @@ typedef struct
 } LogMsg_Struct;
 
 /***************************************
- *  Struct used by NFC thread/task  *
+ *  Struct used by NFC thread/task     *
+ *  (Tiva to BB)                       *
  ***************************************/
 typedef struct
 {
@@ -106,6 +111,68 @@ typedef struct
     uint8_t Src;
     uint8_t NFC_Tag_ID_Array[4];
 } NFC_T2B_Struct;
+
+
+/***************************************
+ *  Struct used by NFC pThread /       *
+ *  KeypadEpaper task (BB to Tiva)     *
+ ***************************************/
+typedef struct
+{
+    uint8_t ID;
+    uint8_t Src;
+    bool KeyPad_Poll;
+    bool EP_Update;
+    char Image_Name[10];
+} KE_B2T_Struct;
+
+
+/***************************************
+ *  Struct used by KeypadEpaper task / *
+ *  pThread (Tiva to BB)               *
+ ***************************************/
+typedef struct
+{
+    uint8_t ID;
+    uint8_t Src;
+    uint8_t KeyPad_Code[6];
+} KE_T2B_Struct;
+
+
+/***************************************
+ *  Struct used by KeypadEpaper pThread*
+ *   / LoadCell task (BB to Tiva)      *
+ ***************************************/
+typedef struct
+{
+    uint8_t ID;
+    uint8_t Src;
+    bool LC_Poll;
+} LC_B2T_Struct;
+
+/***************************************
+ *  Struct used by LoadCell task/thread*
+ *  (Tiva to BB)                       *
+ ***************************************/
+typedef struct
+{
+    uint8_t ID;
+    uint8_t Src;
+    uint16_t LC_SamplesArraymv[20];
+} LC_T2B_Struct;
+
+
+/***************************************
+ *  Struct sent from LoadCell pThread  *
+ *  to Outputs Task                    *
+ *  (BB to Tiva)                       *
+ ***************************************/
+typedef struct
+{
+	uint8_t ID;
+    uint8_t Src;
+    uint8_t OI_Data;
+} OI_B2T_Struct;
 
 
 /***************************************
@@ -119,6 +186,10 @@ typedef struct
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+
+#define RX_TIMEOUT_VALUE               1100000
+
 /*****************************************
  *      System Clock Rate, 120 MHz       *
  *****************************************/
@@ -129,70 +200,14 @@ typedef struct
  *      Priorities of Tasks              *
  *****************************************/
 #define PRIORITY_LOGGER_TASK			0
-#define PRIORITY_BBCOMM_TASK			0
-#define PRIORITY_NFC_TASK				0
+#define PRIORITY_BBCOMM_TASK			2
+#define PRIORITY_NFC_TASK				1
 #define PRIORITY_KEYPADEPAPER_TASK		0
-#define PRIORITY_LOADCELL_TASK			0
+#define PRIORITY_LOADCELL_TASK			1
 #define PRIORITY_LUX_TASK				0
 #define PRIORITY_SERVO_TASK				0
 #define PRIORITY_SPEAKJET_TASK			0
 #define PRIORITY_OUTPUTS_TASK			0
-
-
-// OLD
-///***************************************
-// *     TiveBB Message Structure       *
-// ***************************************/
-//typedef struct TivaBB_MsgStruct
-//{
-//	/* NFC */
-//	uint8_t T_NFC_Tag_ID_Array[4];
-//	bool T_NFC_Error;
-//
-//	/* EPaper */
-//	bool T_EP_Error;
-//	bool B_Update_EPaper;
-//	char B_Image_Name[10];
-//
-//	/* KeyPad */
-//	uint8_t T_KeyPad_Code[6];
-//	bool T_KeyPad_Error;
-//	bool B_KeyPad_Poll;
-//
-//	/* Load Cell */
-//	uint16_t T_LC_SamplesArraymv[20];
-//	bool T_LC_Error;
-//	bool B_Poll_LoadCell;
-//
-//	/* BME280 */
-//	int16_t T_BME280_milliTemperatureCelcius;
-//	uint16_t T_BME280_milliHumidityPercent;
-//	bool T_BME280_Error;
-//
-//	/* Lux */
-//	uint16_t T_Lux_Level;
-//	bool T_Lux_Error;
-//	bool B_Lux_Disable;
-//
-//	/* Gas */
-//	uint16_t T_Gas_Level;
-//	bool T_Gas_Error;
-//
-//	/* PIR */
-//	bool T_PIR_State;
-//	bool B_PIR_Disable;
-//
-//	/* SpeakJet */
-//	uint8_t T_SJ_Data;
-//
-//	/* Servo */
-//	bool B_Servo_Open;
-//
-//	/* Output Indicators */
-//	uint8_t B_OI_Data;
-//
-//} TivaBB_MsgStruct;
-
 
 
 #endif /* MY_INCLUDES_GLOBAL_DEFINES_H_ */

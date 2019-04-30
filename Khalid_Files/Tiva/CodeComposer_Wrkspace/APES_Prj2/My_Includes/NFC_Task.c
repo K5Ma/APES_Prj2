@@ -91,6 +91,8 @@
 /* Global Variables */
 NFC_T2B_Struct NFC_Tx;
 
+uint16_t NFC_counter = 0;
+
 // Variables that will be shared between functions
 bool NFC_Error, NFC_Tag_Mode, NFC_Startup_Mode;
 uint8_t NFC_Retries;
@@ -100,8 +102,6 @@ const uint8_t NFC_WakeUp[]={0x55,0x55,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x
 const uint8_t NFC_FirmwareVersion[]={0x00,0x00,0xFF,0x02,0xFE,0xD4,0x02,0x2A,0x00};
 const uint8_t NFC_TagRead[]={0x00,0x00,0xFF,0x04,0xFC,0xD4,0x4A,0x01,0x00,0xE1,0x00};
 
-/* DEBUGGING */
-UBaseType_t NFC_uxHighWaterMark;
 
 
 uint8_t NFC_TaskInit()
@@ -151,19 +151,18 @@ void NFC_Task(void *pvParameters)
     {
 
         //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send NFC BIST Failure LOG to BB
-    	Log_Msg(T_NFC, "CRITICAL", "NFC BIST failed!", LOGGER_AND_LOCAL);
 
         #if     (NFC_Retry_Mode == NFC_Limited)
             NFC_Retries = NFC_Max_Retries;
         #endif
         #if     NFC_DEBUG_PRINTF
-            Log_Msg(T_NFC, "ERROR", "NFC Module Initialization Failed", LOCAL_ONLY);
+            Log_Msg(T_NFC, "CRITICAL", "NFC Module Initialization Failed!", LOGGER_AND_LOCAL);
         #endif
     }
     else
     {
         #if     NFC_DEBUG_PRINTF
-            Log_Msg(T_NFC, "INFO", "NFC Module Initialization Succeeded", LOCAL_ONLY);
+            Log_Msg(T_NFC, "INFO", "NFC Module Initialization Succeeded", LOGGER_AND_LOCAL);
         #endif
     }
 
@@ -177,15 +176,15 @@ void NFC_Task(void *pvParameters)
             NFC_Retries = NFC_Max_Retries;
         #endif
         #if     NFC_DEBUG_PRINTF
-            Log_Msg(T_NFC, "ERROR", "NFC Firmwave Version Verification Failed", LOCAL_ONLY);
+            Log_Msg(T_NFC, "ERROR", "NFC Firmwave Version Verification Failed", LOGGER_AND_LOCAL);
         #endif
     }
     else
     {
         //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Send NFC BIST Success LOG to BB
         #if     NFC_DEBUG_PRINTF
-            Log_Msg(T_NFC, "INFO", "NFC Firmwave Version Verification Succeeded", LOCAL_ONLY);
-            Log_Msg(T_NFC, "INFO", "Starting NFC Normal Operation", LOCAL_ONLY);
+            Log_Msg(T_NFC, "INFO", "NFC Firmwave Version Verification Succeeded", LOGGER_AND_LOCAL);
+            Log_Msg(T_NFC, "INFO", "Starting NFC Normal Operation", LOGGER_AND_LOCAL);
         #endif
     }
 
@@ -212,6 +211,7 @@ void NFC_Task(void *pvParameters)
     {
 
         vTaskDelay(NFC_Polling_Timems);
+        NFC_counter += 1;
 
 //        taskENTER_CRITICAL();
 
@@ -243,6 +243,11 @@ void NFC_Task(void *pvParameters)
                 #if     NFC_DEBUG_PRINTF
                     Log_Msg(T_NFC, "INFO", "Sending NFC Tag to Control Node", LOCAL_ONLY);
                 #endif
+
+                /* Sending NFC Struct to BB */
+                Send_NFCStruct_ToBB(NFC_Tx);
+
+                //taskYIELD();
                 vTaskDelay(NFC_Wait_Timems);
             }
         }
@@ -300,7 +305,7 @@ uint8_t NFC_UART_Rx(void)
             {
                 timeout = 0;
                 #if     NFC_DEBUG_PRINTF
-                    Log_Msg(T_NFC, "INFO", "Checking NFC Module State...", LOCAL_ONLY);
+//                    Log_Msg(T_NFC, "INFO", "Checking NFC Module State...", LOCAL_ONLY);
                 #endif
                 NFC_Tag_Mode = false;
                 return 0;
@@ -314,10 +319,8 @@ uint8_t NFC_UART_Rx(void)
             {
                 timeout = 0;
                 #if     NFC_DEBUG_PRINTF
-                    Log_Msg(T_NFC, "ERROR", "NFC Module is Offline", LOCAL_ONLY);
+                    Log_Msg(T_NFC, "CRITICAL", "NFC Module is Offline", LOGGER_AND_LOCAL);
                 #endif
-
-                NFC_uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
 
                 NFC_Startup_Mode = false;
                 return 0;
@@ -418,7 +421,11 @@ void NFC_Sensor_Test(void)
         {
             NFC_Error = false;
             #if     NFC_DEBUG_PRINTF
-                Log_Msg(T_NFC, "INFO", "NFC Module is Online", LOCAL_ONLY);
+            if(NFC_counter >= 10)
+            {
+            	NFC_counter = 0;
+            	Log_Msg(T_NFC, "INFO", "NFC Module is Online", LOCAL_ONLY);
+            }
             #endif
         }
 #if     (NFC_Retry_Mode == NFC_Limited)
@@ -448,7 +455,7 @@ bool NFC_Read_Tag_ID(void)
     for(i = 0; i < 4; i ++)     NFC_Tx.NFC_Tag_ID_Array[i] = 0;
 
     #if     NFC_DEBUG_PRINTF
-        Log_Msg(T_NFC, "INFO", "Waiting for Tag", LOCAL_ONLY);
+//        Log_Msg(T_NFC, "INFO", "Waiting for Tag", LOCAL_ONLY);
     #endif
 
     NFC_Tag_Mode = true;
@@ -473,7 +480,7 @@ bool NFC_Read_Tag_ID(void)
         for(i = 0; i < NFC_Tag_ID_Length; i ++)    NFC_Tx.NFC_Tag_ID_Array[i] = NFC_Rx_Array[(i + NFC_Standard_ACK_Size + NFC_Tag_ID_Start_Byte_Pos)];
         #if     NFC_DEBUG_PRINTF
             snprintf(tp, 50, "Tag ID: %02X:%02X:%02X:%02X", NFC_Tx.NFC_Tag_ID_Array[0], NFC_Tx.NFC_Tag_ID_Array[1], NFC_Tx.NFC_Tag_ID_Array[2], NFC_Tx.NFC_Tag_ID_Array[3]);
-            Log_Msg(T_NFC, "INFO", tp, LOCAL_ONLY);
+            Log_Msg(T_NFC, "INFO", tp, LOGGER_AND_LOCAL);
         #endif
     }
     else    for(i = 0; i < NFC_Tag_ID_Length; i ++)    NFC_Tx.NFC_Tag_ID_Array[i] = 0;
@@ -497,7 +504,7 @@ bool NFC_Module_Init(void)
     NFC_Startup_Mode = true;
 
     #if     NFC_DEBUG_PRINTF
-         Log_Msg(T_NFC, "INFO", "Waking up the Module", LOCAL_ONLY);
+         Log_Msg(T_NFC, "INFO", "Waking up the Module", LOGGER_AND_LOCAL);
     #endif
 
     for(i = 0; i < sizeof(NFC_WakeUp); i ++)    UARTCharPut(UART5_BASE, NFC_WakeUp[i]);

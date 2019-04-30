@@ -17,7 +17,8 @@
  *   where and how to begin creating my own driver library.
  *
  *  # FUTURE PLANS:
- *  - NONE
+ *  - Use UARTIntRegister() instead of modifying vector table - makes library more portable.
+ *  -
  ---------------------------------------------------------------------------------------------*/
 
 #ifndef MY_INCLUDES_MY_UART_H_
@@ -125,8 +126,9 @@ void Init_UARTx(uint8_t UART_Num, uint32_t Clock, uint32_t BaudRate, bool Interr
 
 
 /**************************************************************************************************************
- * USAGE: IRQ Handler for UART0. Make sure this function name is exactly as what processor expects (meaning
- * 		  make sure to modify the vector table with the same function call if you did not already).
+ * USAGE: IRQ Handler for UART0. Make sure this function name is exactly as what the processor expects (meaning
+ * 		  make sure to modify the vector table with the same function call if you did not already or you can
+ * 		  call UARTIntRegister(UARTxBASE, YourHandler) )
  *
  * PARAMETERS:
  * 			  - NONE
@@ -136,8 +138,9 @@ void Init_UARTx(uint8_t UART_Num, uint32_t Clock, uint32_t BaudRate, bool Interr
 void UART0_IntHandler();
 
 /**************************************************************************************************************
- * USAGE: IRQ Handler for UART1. Make sure this function name is exactly as what processor expects (meaning
- * 		  make sure to modify the vector table with the same function call if you did not already).
+ * USAGE: IRQ Handler for UART1. Make sure this function name is exactly as what the processor expects (meaning
+ * 		  make sure to modify the vector table with the same function call if you did not already or you can
+ * 		  call UARTIntRegister(UARTxBASE, YourHandler) )
  *
  * PARAMETERS:
  * 			  - NONE
@@ -147,8 +150,9 @@ void UART0_IntHandler();
 void UART1_IntHandler();
 
 /**************************************************************************************************************
- * USAGE: IRQ Handler for UART2. Make sure this function name is exactly as what processor expects (meaning
- * 		  make sure to modify the vector table with the same function call if you did not already).
+ * USAGE: IRQ Handler for UART2. Make sure this function name is exactly as what the processor expects (meaning
+ * 		  make sure to modify the vector table with the same function call if you did not already or you can
+ * 		  call UARTIntRegister(UARTxBASE, YourHandler) )
  *
  * PARAMETERS:
  * 			  - NONE
@@ -158,8 +162,9 @@ void UART1_IntHandler();
 void UART2_IntHandler();
 
 /**************************************************************************************************************
- * USAGE: IRQ Handler for UART3. Make sure this function name is exactly as what processor expects (meaning
- * 		  make sure to modify the vector table with the same function call if you did not already).
+ * USAGE: IRQ Handler for UART3. Make sure this function name is exactly as what the processor expects (meaning
+ * 		  make sure to modify the vector table with the same function call if you did not already or you can
+ * 		  call UARTIntRegister(UARTxBASE, YourHandler) )
  *
  * PARAMETERS:
  * 			  - NONE
@@ -169,8 +174,9 @@ void UART2_IntHandler();
 void UART3_IntHandler();
 
 /**************************************************************************************************************
- * USAGE: IRQ Handler for UART4. Make sure this function name is exactly as what processor expects (meaning
- * 		  make sure to modify the vector table with the same function call if you did not already).
+ * USAGE: IRQ Handler for UART4. Make sure this function name is exactly as what the processor expects (meaning
+ * 		  make sure to modify the vector table with the same function call if you did not already or you can
+ * 		  call UARTIntRegister(UARTxBASE, YourHandler) )
  *
  * PARAMETERS:
  * 			  - NONE
@@ -180,8 +186,9 @@ void UART3_IntHandler();
 void UART4_IntHandler();
 
 /**************************************************************************************************************
- * USAGE: IRQ Handler for UART5. Make sure this function name is exactly as what processor expects (meaning
- * 		  make sure to modify the vector table with the same function call if you did not already).
+ * USAGE: IRQ Handler for UART5. Make sure this function name is exactly as what the processor expects (meaning
+ * 		  make sure to modify the vector table with the same function call if you did not already or you can
+ * 		  call UARTIntRegister(UARTxBASE, YourHandler) )
  *
  * PARAMETERS:
  * 			  - NONE
@@ -191,8 +198,9 @@ void UART4_IntHandler();
 void UART5_IntHandler();
 
 /**************************************************************************************************************
- * USAGE: IRQ Handler for UART6. Make sure this function name is exactly as what processor expects (meaning
- * 		  make sure to modify the vector table with the same function call if you did not already).
+ * USAGE: IRQ Handler for UART6. Make sure this function name is exactly as what the processor expects (meaning
+ * 		  make sure to modify the vector table with the same function call if you did not already or you can
+ * 		  call UARTIntRegister(UARTxBASE, YourHandler) )
  *
  * PARAMETERS:
  * 			  - NONE
@@ -202,8 +210,9 @@ void UART5_IntHandler();
 void UART6_IntHandler();
 
 /**************************************************************************************************************
- * USAGE: IRQ Handler for UART7. Make sure this function name is exactly as what processor expects (meaning
- * 		  make sure to modify the vector table with the same function call if you did not already).
+ * USAGE: IRQ Handler for UART7. Make sure this function name is exactly as what the processor expects (meaning
+ * 		  make sure to modify the vector table with the same function call if you did not already or you can
+ * 		  call UARTIntRegister(UARTxBASE, YourHandler) )
  *
  * PARAMETERS:
  * 			  - NONE
